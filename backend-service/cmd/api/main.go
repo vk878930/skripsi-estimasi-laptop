@@ -46,13 +46,14 @@ func main() {
 
 	// 2. Setup Dependency Injection
 	// URL Python kita masukkan di sini agar suatu saat mudah diganti ke .env
-pythonMLUrl := os.Getenv("PYTHON_ML_URL") // Ambil URL Python dari .env juga
+	pythonMLUrl := os.Getenv("PYTHON_ML_URL") // Ambil URL Python dari .env juga
 	if pythonMLUrl == "" {
 		pythonMLUrl = "http://localhost:8000/predict" // Fallback jika kosong
-	}	
-laptopRepo := repository.NewLaptopRepository(db)
+	}
+	laptopRepo := repository.NewLaptopRepository(db)
 	laptopUsecase := usecase.NewLaptopUsecase(pythonMLUrl, laptopRepo)
 	handler.NewLaptopHandler(router, laptopUsecase)
 	// 3. Jalankan Server
-log.Println("Backend Golang berjalan di port 8080...")
-	router.Run(":8080")}
+	log.Println("Backend Golang berjalan di port 8080...")
+	router.Run(":8080")
+}

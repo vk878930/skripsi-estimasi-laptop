@@ -4,8 +4,8 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	
-    // Sesuaikan "skripsi-backend" dengan nama module di file go.mod kamu
+
+	// Sesuaikan "skripsi-backend" dengan nama module di file go.mod kamu
 	"github.com/vk878930/skripsi-backend/entity"
 	"github.com/vk878930/skripsi-backend/internal/usecase"
 )
