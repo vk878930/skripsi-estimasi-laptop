@@ -1,0 +1,28 @@
+# ========================
+# PYTHON (ML Service)
+# ========================
+venv/
+__pycache__/
+*.pyc
+.env
+
+# ========================
+# GOLANG (Backend Service)
+# ========================
+# Mengabaikan file executable hasil build
+backend-service/backend-service
+backend-service.exe
+*.exe
+
+# ========================
+# FRONTEND (React/Vite)
+# ========================
+node_modules/
+dist/
+.eslintcache
+
+# ========================
+# OS & Editor
+# ========================
+.vscode/
+.DS_Store
