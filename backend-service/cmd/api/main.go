@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/gin-contrib/cors"
 
     // Sesuaikan "skripsi-backend" dengan nama module di file go.mod kamu
 	"github.com/vk878930/skripsi-backend/internal/handler"
@@ -11,6 +12,8 @@ import (
 func main() {
 	// 1. Inisialisasi Router Gin
 	router := gin.Default()
+
+	router.Use(cors.Default())
 
 	// 2. Setup Dependency Injection
 	// URL Python kita masukkan di sini agar suatu saat mudah diganti ke .env
