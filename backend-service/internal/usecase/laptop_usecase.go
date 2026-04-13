@@ -6,9 +6,11 @@ import (
 	"errors"
 	"io"
 	"net/http"
-	
-    // Sesuaikan "skripsi-backend" dengan nama module di file go.mod kamu
-	"github.com/vk878930/skripsi-backend/entity" 
+	"time"
+
+	// Sesuaikan "skripsi-backend" dengan nama module di file go.mod kamu
+	"github.com/vk878930/skripsi-backend/entity"
+	"github.com/vk878930/skripsi-backend/internal/repository"
 )
 
 // LaptopUsecase adalah interface (Kontrak) untuk logika laptop
@@ -19,13 +21,14 @@ type LaptopUsecase interface {
 
 type laptopUsecaseImpl struct {
 	pythonAPIUrl string
+	laptopRepo   repository.LaptopRepository
 }
 
 // NewLaptopUsecase adalah constructor untuk membuat usecase baru
-func NewLaptopUsecase(pythonURL string) LaptopUsecase {
+func NewLaptopUsecase(pythonURL string, repo repository.LaptopRepository) LaptopUsecase {
 	return &laptopUsecaseImpl{
 		pythonAPIUrl: pythonURL,
-	}
+		laptopRepo:   repo}
 }
 
 // DapatkanEstimasiHarga adalah implementasi dari logika memanggil ML Service
@@ -49,6 +52,28 @@ func (u *laptopUsecaseImpl) DapatkanEstimasiHarga(spek entity.SpesifikasiLaptop)
 	bodyBytes, _ := io.ReadAll(response.Body)
 	var hasil map[string]interface{}
 	json.Unmarshal(bodyBytes, &hasil)
+
+	// --- LOGIKA BARU: SIMPAN KE DATABASE ---
+	// Ambil harga dari hasil JSON (karena JSON angka, di Golang jadi float64)
+	hargaFloat, ok := hasil["estimasi_harga_rupiah"].(float64)
+	hargaInt := 0
+	if ok {
+		hargaInt = int(hargaFloat)
+	}
+
+	// Bentuk data untuk disimpan ke tabel PostgreSQL
+	riwayat := &entity.RiwayatPrediksi{
+		RAM:       spek.RAM,
+		SSD:       spek.SSD,
+		Tahun:     spek.Tahun,
+		Kondisi:   spek.Kondisi,
+		Harga:     hargaInt,
+		CreatedAt: time.Now(),
+	}
+
+	// Panggil repository untuk menyimpan (jika gagal, kita abaikan saja agar user tetap dapat harga)
+	_ = u.laptopRepo.SimpanRiwayat(riwayat)
+	// --------------------------------------
 
 	return hasil, nil
 }
