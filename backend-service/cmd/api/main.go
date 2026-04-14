@@ -35,7 +35,12 @@ func main() {
 	}
 
 	// 3. AUTO-MIGRATE
-	err = db.AutoMigrate(&entity.RiwayatPrediksi{})
+	err = db.AutoMigrate(
+		&entity.RiwayatPrediksi{},
+		&entity.Penjualan{},
+		&entity.ItemPenjualan{},
+	)
+
 	if err != nil {
 		log.Fatal("Gagal membuat tabel:", err)
 	}
@@ -53,7 +58,13 @@ func main() {
 	laptopRepo := repository.NewLaptopRepository(db)
 	laptopUsecase := usecase.NewLaptopUsecase(pythonMLUrl, laptopRepo)
 	handler.NewLaptopHandler(router, laptopUsecase)
+
+	penjualanRepo := repository.NewPenjualanRepository(db)
+	penjualanUsecase := usecase.NewPenjualanUsecase(penjualanRepo)
+	handler.NewPenjualanHandler(router, penjualanUsecase)
+
 	// 3. Jalankan Server
+
 	log.Println("Backend Golang berjalan di port 8080...")
 	router.Run(":8080")
 }
