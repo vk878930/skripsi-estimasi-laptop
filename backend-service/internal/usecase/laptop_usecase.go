@@ -17,6 +17,7 @@ import (
 // Di industri, pakai interface itu wajib agar kode mudah di-mocking saat Unit Test
 type LaptopUsecase interface {
 	DapatkanEstimasiHarga(spek entity.SpesifikasiLaptop) (map[string]interface{}, error)
+	DapatkanRiwayat() ([]entity.RiwayatPrediksi, error)
 }
 
 type laptopUsecaseImpl struct {
@@ -76,4 +77,10 @@ func (u *laptopUsecaseImpl) DapatkanEstimasiHarga(spek entity.SpesifikasiLaptop)
 	// --------------------------------------
 
 	return hasil, nil
+}
+
+// Implementasi fungsi DapatkanRiwayat
+func (u *laptopUsecaseImpl) DapatkanRiwayat() ([]entity.RiwayatPrediksi, error) {
+    // Usecase tinggal memanggil fungsi yang sudah kita buat di Repository tadi
+    return u.laptopRepo.AmbilSemuaRiwayat()
 }

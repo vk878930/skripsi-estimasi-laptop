@@ -22,6 +22,7 @@ func NewLaptopHandler(r *gin.Engine, us usecase.LaptopUsecase) {
 
 	// Mendaftarkan routing endpoint
 	r.POST("/api/estimasi", handler.EstimasiHarga)
+	r.GET("/api/estimasi/riwayat", handler.AmbilRiwayatPrediksi)
 }
 
 // EstimasiHarga adalah fungsi yang menangani endpoint POST /api/estimasi
@@ -46,4 +47,16 @@ func (h *LaptopHandler) EstimasiHarga(c *gin.Context) {
 		"pesan": "Berhasil memproses via arsitektur clean",
 		"data":  hasil,
 	})
+}
+
+
+func (h *LaptopHandler) AmbilRiwayatPrediksi(c *gin.Context) {
+	// Panggil fungsi dari usecase (Sesuaikan nama fungsinya dengan yang ada di usecase kamu)
+	data, err := h.laptopUsecase.DapatkanRiwayat() 
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal mengambil riwayat prediksi"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"data": data})
 }

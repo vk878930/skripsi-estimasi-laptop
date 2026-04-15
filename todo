@@ -1,8 +1,8 @@
 Make Import Export Excel for data penjualan **DONE**
-Add Edit and Delete to Transaksi
+Add Edit and Delete to Transaksi **DONE**
 Make a Dataset of minimal 500 sales
 Make Laporan with logo and date etc
-There is supposed to be riwayat prediksi but it has not been implemented to the frontend
+There is supposed to be riwayat prediksi but it has not been implemented to the frontend **DONE**
 Make a code documentation
 Maybe Deploy to Docker
 Login Needs to be made(should we add roles?)
