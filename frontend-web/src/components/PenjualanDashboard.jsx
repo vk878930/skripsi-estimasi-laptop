@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react'
 import axios from 'axios'
 import AddTransaksiModal from './AddTransaksiModal';
+import EditTransaksiModal from './EditTransaksiModal';
 
 export default function PenjualanDashboard() {
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState(null);
   const [daftarPenjualan, setDaftarPenjualan] = useState([])
   const [loading, setLoading] = useState(true)
   const [expandedId, setExpandedId] = useState(null)
@@ -27,6 +30,30 @@ export default function PenjualanDashboard() {
     const year = date.getFullYear();
     return `${day}-${month}-${year}`; // Menggabungkan dengan strip
   };
+
+  // Fungsi untuk membuka modal edit dengan data transaksi spesifik
+  const handleEditClick = (e, order) => {
+    e.stopPropagation(); // Mencegah baris (accordion) terbuka saat ngeklik tombol
+    setSelectedOrder(order); // Menyimpan data baris yang diklik
+    setIsEditModalOpen(true); //  modal edit
+  }
+
+  // Fungsi Delete
+  const handleDelete = async (e, id, order_id) => {
+    e.stopPropagation(); // Mencegah baris terbuka saat ngeklik tombol
+    const confirmDelete = window.confirm(`Apakah Anda yakin ingin menghapus Nota ${order_id}? Data laptop di dalamnya juga akan terhapus.`);
+    
+    if (confirmDelete) {
+      try {
+        await axios.delete(`http://localhost:8080/api/penjualan/${id}`);
+        alert("Transaksi berhasil dihapus!");
+        fetchPenjualan(); // Refresh tabel
+      } catch (error) {
+        console.error(error);
+        alert("Gagal menghapus transaksi.");
+      }
+    }
+  }
 
   const handleImportExcel = async (e) => {
   const file = e.target.files[0];
@@ -79,6 +106,13 @@ export default function PenjualanDashboard() {
         onRefresh={fetchPenjualan} 
       />
 
+      <EditTransaksiModal 
+        isOpen={isEditModalOpen} 
+        onClose={() => setIsEditModalOpen(false)} 
+        onRefresh={fetchPenjualan} 
+        initialData={selectedOrder}
+      />
+
       <div className="table-card">
         {loading ? (
           <p style={{ textAlign: 'center', color: '#64748b', padding: '30px' }}>Memuat data dari database...</p>
@@ -110,11 +144,24 @@ export default function PenjualanDashboard() {
                     <td style={{ fontWeight: 'bold', color: '#16a34a' }}>
                       Rp {order.harga_total.toLocaleString('id-ID')}
                     </td>
+                    <td style={{ textAlign: 'center' }}>
+                      {/* Tombol Edit dan Hapus */}
+                      <button 
+                        onClick={(e) => handleEditClick(e, order)}
+                        style={{ background: '#fef08a', color: '#854d0e', border: 'none', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer', marginRight: '8px', fontWeight: '600' }}>
+                        Edit
+                      </button>
+                      <button 
+                        onClick={(e) => handleDelete(e, order.id, order.order_id)}
+                        style={{ background: '#fecaca', color: '#b91c1c', border: 'none', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer', fontWeight: '600' }}>
+                        Hapus
+                      </button>
+                    </td>
                   </tr>
 
                   {expandedId === order.order_id && (
                     <tr className="detail-row">
-                      <td colSpan="5">
+                      <td colSpan="6">
                         <div className="detail-container">
                           <h4 style={{ margin: '0 0 10px 0', color: '#0f172a' }}>Rincian Laptop:</h4>
                           <table className="detail-table">
