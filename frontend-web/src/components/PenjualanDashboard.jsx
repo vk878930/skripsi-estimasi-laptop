@@ -28,6 +28,24 @@ export default function PenjualanDashboard() {
     return `${day}-${month}-${year}`; // Menggabungkan dengan strip
   };
 
+  const handleImportExcel = async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const formData = new FormData();
+  formData.append('file', file);
+
+  try {
+    await axios.post('http://localhost:8080/api/penjualan/import', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+    alert("Import Berhasil!");
+    fetchPenjualan(); // Refresh data tabel
+  } catch (error) {
+    alert("Gagal Import: " + error.message);
+  }
+};
+
   useEffect(() => {
     fetchPenjualan()
   }, [])
@@ -44,10 +62,11 @@ export default function PenjualanDashboard() {
           <p style={{ margin: 0, color: '#64748b', fontSize: '0.9rem' }}>Riwayat transaksi laptop seken</p>
         </div>
         <div style={{ display: 'flex', gap: '10px' }}>
-          <button style={{ backgroundColor: '#10b981', color: 'white', border: 'none', padding: '10px 15px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>
-            📊 Export Excel
-          </button>
-          <button style={{ backgroundColor: '#2563eb', color: 'white', border: 'none', padding: '10px 15px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}
+      <label className="btn-primary" style={{ backgroundColor: '#10b981', cursor: 'pointer' }}>
+      📊 Import Excel
+         <input type="file" accept=".xlsx" onChange={handleImportExcel} style={{ display: 'none' }} />
+      </label>          
+      <button style={{ backgroundColor: '#2563eb', color: 'white', border: 'none', padding: '10px 15px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}
             onClick={() => setIsModalOpen(true)}>
             ➕ Tambah Transaksi
           </button>
@@ -112,7 +131,7 @@ export default function PenjualanDashboard() {
                             <tbody>
                               {order.items?.map((item) => (
                                 <tr key={item.id}>
-                                  <td><code style={{ background: '#f1f5f9', padding: '2px 6px', borderRadius: '4px' }}>{item.barcode}</code></td>
+                                  <td><code style={{ background: '#f1f5f9', padding: '2px 6px', borderRadius: '4px', color: '#1e293b'  }}>{item.barcode}</code></td>
                                   <td style={{ fontWeight: '500' }}>{item.merek} {item.nama_unit}</td>
                                   <td>{item.processor}</td>
                                   <td>{item.ram}GB / {item.ssd}GB</td>
