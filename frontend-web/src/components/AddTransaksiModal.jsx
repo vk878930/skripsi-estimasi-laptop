@@ -43,6 +43,8 @@ export default function AddTransaksiModal({ isOpen, onClose, onRefresh }) {
 
     const payload = {
       ...header,
+      // Konversi tanggal ke format ISO lengkap agar diterima backend Golang
+      tanggal_jual: new Date(header.tanggal_jual).toISOString(), 
       harga_total: totalHarga,
       items: processedItems
     };
@@ -54,7 +56,7 @@ export default function AddTransaksiModal({ isOpen, onClose, onRefresh }) {
       onClose(); 
     } catch (error) {
       console.error(error);
-      alert("Gagal simpan transaksi. Cek log backend!");
+      alert("Gagal simpan transaksi: " + (error.response?.data?.detail || error.message));
     }
   };
 
@@ -73,20 +75,49 @@ export default function AddTransaksiModal({ isOpen, onClose, onRefresh }) {
               <label>Nama Pembeli:</label>
               <input type="text" value={header.nama_pembeli} onChange={(e) => setHeader({...header, nama_pembeli: e.target.value})} required />
             </div>
+            <div className="input-group">
+              <label>Tanggal Penjualan:</label>
+              <input type="date" value={header.tanggal_jual} onChange={(e) => setHeader({...header, tanggal_jual: e.target.value})} required />
+            </div>
           </div>
 
-          <hr style={{ border: 'none', borderTop: '1px solid #e2e8f0', margin: '20px 0' }} />
+          <hr style={{ border: 'none', borderTop: '1px solid #e2e8f0', margin: '15px 0' }} />
           
-          <h4 style={{ margin: '0 0 15px 0', color: '#475569' }}>Daftar Laptop:</h4>
+          <h4 style={{ margin: '0 0 15px 0', color: '#475569' }}>Daftar Laptop Terjual:</h4>
+          
           {items.map((item, index) => (
             <div key={index} className="item-input-group">
-              <div className="form-row" style={{ marginBottom: 0 }}>
+              
+              {/* Baris 1: Identitas Laptop */}
+              <div className="form-row" style={{ marginBottom: '10px' }}>
+                <input type="text" name="barcode" placeholder="Barcode" value={item.barcode} onChange={(e) => handleItemChange(index, e)} required style={{ width: '120px' }}/>
                 <input type="text" name="merek" placeholder="Merek (Ex: Lenovo)" value={item.merek} onChange={(e) => handleItemChange(index, e)} required style={{ flex: 1 }}/>
-                <input type="text" name="nama_unit" placeholder="Unit (Ex: Thinkpad T480)" value={item.nama_unit} onChange={(e) => handleItemChange(index, e)} required style={{ flex: 1 }}/>
-                <input type="number" name="harga_terjual" placeholder="Harga Satuan" value={item.harga_terjual === 0 ? '' : item.harga_terjual} onChange={(e) => handleItemChange(index, e)} required style={{ flex: 1 }}/>
-                <input type="number" name="qty" placeholder="Qty" value={item.qty} style={{ width: '70px' }} onChange={(e) => handleItemChange(index, e)} required />
-                {items.length > 1 && <button type="button" onClick={() => handleRemoveItem(index)} className="btn-delete-item">×</button>}
+                <input type="text" name="nama_unit" placeholder="Unit (Ex: Thinkpad T480)" value={item.nama_unit} onChange={(e) => handleItemChange(index, e)} required style={{ flex: 1.5 }}/>
+                <input type="text" name="processor" placeholder="Processor (Ex: i5 Gen 8)" value={item.processor} onChange={(e) => handleItemChange(index, e)} required style={{ flex: 1 }}/>
+                
+                {/* Tombol Hapus Baris */}
+                {items.length > 1 && (
+                  <button type="button" onClick={() => handleRemoveItem(index)} className="btn-delete-item" title="Hapus Laptop Ini">×</button>
+                )}
               </div>
+
+              {/* Baris 2: Spesifikasi KNN & Harga */}
+              <div className="form-row" style={{ marginBottom: 0 }}>
+                <input type="number" name="ram" placeholder="RAM (GB)" value={item.ram === 0 ? '' : item.ram} onChange={(e) => handleItemChange(index, e)} required style={{ width: '80px' }} title="RAM dalam GB"/>
+                <input type="number" name="ssd" placeholder="SSD (GB)" value={item.ssd === 0 ? '' : item.ssd} onChange={(e) => handleItemChange(index, e)} required style={{ width: '80px' }} title="Kapasitas SSD"/>
+                <input type="number" name="tahun" placeholder="Tahun" value={item.tahun === 0 ? '' : item.tahun} onChange={(e) => handleItemChange(index, e)} required style={{ width: '80px' }} title="Tahun Rilis"/>
+                
+                <select name="kondisi" value={item.kondisi} onChange={(e) => handleItemChange(index, e)} required style={{ flex: 1 }}>
+                  <option value={4}>Mulus (Seperti Baru)</option>
+                  <option value={3}>Lecet Pemakaian Wajar</option>
+                  <option value={2}>Minus Minor (Dent/Whitespot)</option>
+                  <option value={1}>Minus Mayor</option>
+                </select>
+
+                <input type="number" name="harga_terjual" placeholder="Harga Satuan" value={item.harga_terjual === 0 ? '' : item.harga_terjual} onChange={(e) => handleItemChange(index, e)} required style={{ flex: 1 }}/>
+                <input type="number" name="qty" placeholder="Qty" value={item.qty} style={{ width: '60px' }} onChange={(e) => handleItemChange(index, e)} required />
+              </div>
+              
             </div>
           ))}
 

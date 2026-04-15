@@ -30,7 +30,10 @@ func NewPenjualanHandler(r *gin.Engine, u usecase.PenjualanUsecase) {
 func (h *PenjualanHandler) BuatTransaksi(c *gin.Context) {
 	var penjualan entity.Penjualan
 	if err := c.ShouldBindJSON(&penjualan); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Format data tidak valid"})
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Format data tidak valid",
+			"detail": err.Error(),
+		})
 		return
 	}
 
