@@ -4,14 +4,18 @@ import "time"
 
 // SpesifikasiLaptop adalah representasi data yang dikirim user
 type SpesifikasiLaptop struct {
-	RAM     int `json:"ram"`
-	SSD     int `json:"ssd"`
-	Tahun   int `json:"tahun"`
-	Kondisi int `json:"kondisi"`
+	Merek     string `json:"merek"`
+	Processor string `json:"processor"`
+	RAM       int    `json:"ram"`
+	SSD       int    `json:"ssd"`
+	Tahun     int    `json:"tahun"`
+	Kondisi   int    `json:"kondisi"`
 }
 
 type RiwayatPrediksi struct {
 	ID        uint      `gorm:"primaryKey" json:"id"`
+	Merek     string    `json:"merek"`
+	Processor string    `json:"processor"`
 	RAM       int       `json:"ram"`
 	SSD       int       `json:"ssd"`
 	Tahun     int       `json:"tahun"`

@@ -2,7 +2,9 @@ import { useState, useEffect } from 'react'
 import axios from 'axios'
 
 export default function EstimasiForm() {
-  const [formData, setFormData] = useState({ ram: 8, ssd: 256, tahun: 2021, kondisi: 4 })
+  const [formData, setFormData] = useState({ 
+    merek: 'Lenovo', processor: 'Intel Core i5', ram: 8, ssd: 256, tahun: 2021, kondisi: 4 
+  })
   const [hasilEstimasi, setHasilEstimasi] = useState(null)
   const [loading, setLoading] = useState(false)
   
@@ -25,7 +27,13 @@ export default function EstimasiForm() {
   }, [])
 
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: parseInt(e.target.value) })
+    const { name, value } = e.target;
+    // Parse int for numbers
+    if (['ram', 'ssd', 'tahun', 'kondisi'].includes(name)) {
+      setFormData({ ...formData, [name]: parseInt(value) || 0 })
+    } else {
+      setFormData({ ...formData, [name]: value })
+    }
   }
 
   const handleSubmit = async (e) => {
@@ -65,13 +73,26 @@ export default function EstimasiForm() {
 
       {/* --- FORM INPUT ESTIMASI --- */}
       <form onSubmit={handleSubmit} className="form-card">
-        <div className="input-group">
-          <label>RAM (GB):</label>
-          <input type="number" name="ram" value={formData.ram} onChange={handleChange} />
+        <div className="form-row">
+          <div className="input-group">
+            <label>Merek:</label>
+            <input type="text" name="merek" value={formData.merek} onChange={handleChange} placeholder="Ex: Lenovo" required />
+          </div>
+          <div className="input-group">
+            <label>Processor:</label>
+            <input type="text" name="processor" value={formData.processor} onChange={handleChange} placeholder="Ex: i5 Gen 8" required />
+          </div>
         </div>
-        <div className="input-group">
-          <label>SSD (GB):</label>
-          <input type="number" name="ssd" value={formData.ssd} onChange={handleChange} />
+
+        <div className="form-row">
+          <div className="input-group">
+            <label>RAM (GB):</label>
+            <input type="number" name="ram" value={formData.ram} onChange={handleChange} />
+          </div>
+          <div className="input-group">
+            <label>SSD (GB):</label>
+            <input type="number" name="ssd" value={formData.ssd} onChange={handleChange} />
+          </div>
         </div>
         <div className="input-group">
           <label>Tahun Rilis:</label>
@@ -113,6 +134,7 @@ export default function EstimasiForm() {
               <thead>
                 <tr>
                   <th>Waktu Cek</th>
+                  <th>Merek & Proc</th>
                   <th>Spesifikasi (RAM/SSD)</th>
                   <th>Tahun</th>
                   <th>Kondisi</th>
@@ -128,6 +150,7 @@ export default function EstimasiForm() {
                         hour: '2-digit', minute: '2-digit'
                       })}
                     </td>
+                    <td>{item.merek} - {item.processor}</td>
                     <td style={{ fontWeight: '500' }}>{item.ram}GB / {item.ssd}GB</td>
                     <td>{item.tahun}</td>
                     <td>{getKondisiText(item.kondisi)}</td>

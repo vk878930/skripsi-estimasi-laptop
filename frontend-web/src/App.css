@@ -290,3 +290,14 @@ button:disabled {
   text-align: center;
   border: 1px solid #bbf7d0;
 }
+
+.kondisi-badge {
+  background-color: #e2e8f0;
+  color: #334155;
+  padding: 4px 8px;
+  border-radius: 9999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  display: inline-block;
+  white-space: nowrap;
+}

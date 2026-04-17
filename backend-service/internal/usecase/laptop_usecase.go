@@ -64,6 +64,8 @@ func (u *laptopUsecaseImpl) DapatkanEstimasiHarga(spek entity.SpesifikasiLaptop)
 
 	// Bentuk data untuk disimpan ke tabel PostgreSQL
 	riwayat := &entity.RiwayatPrediksi{
+		Merek:     spek.Merek,
+		Processor: spek.Processor,
 		RAM:       spek.RAM,
 		SSD:       spek.SSD,
 		Tahun:     spek.Tahun,

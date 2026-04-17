@@ -10,6 +10,8 @@ export default function PenjualanDashboard() {
   const [daftarPenjualan, setDaftarPenjualan] = useState([])
   const [loading, setLoading] = useState(true)
   const [expandedId, setExpandedId] = useState(null)
+  
+  const role = localStorage.getItem('role');
 
   const fetchPenjualan = async () => {
     try {
@@ -55,6 +57,17 @@ export default function PenjualanDashboard() {
     }
   }
 
+  // Menerjemahkan angka kondisi fisik ke teks agar mudah dibaca di tabel
+  const getKondisiText = (angka) => {
+    switch(angka) {
+      case 4: return "Mulus";
+      case 3: return "Lecet";
+      case 2: return "Minus Minor";
+      case 1: return "Minus Mayor";
+      default: return "-";
+    }
+  }
+
   const handleImportExcel = async (e) => {
   const file = e.target.files[0];
   if (!file) return;
@@ -88,16 +101,19 @@ export default function PenjualanDashboard() {
           <h2 style={{ margin: 0, color: '#0f172a' }}>📦 Data Penjualan</h2>
           <p style={{ margin: 0, color: '#64748b', fontSize: '0.9rem' }}>Riwayat transaksi laptop seken</p>
         </div>
-        <div style={{ display: 'flex', gap: '10px' }}>
-      <label className="btn-primary" style={{ backgroundColor: '#10b981', cursor: 'pointer' }}>
-      📊 Import Excel
-         <input type="file" accept=".xlsx" onChange={handleImportExcel} style={{ display: 'none' }} />
-      </label>          
-      <button style={{ backgroundColor: '#2563eb', color: 'white', border: 'none', padding: '10px 15px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}
-            onClick={() => setIsModalOpen(true)}>
-            ➕ Tambah Transaksi
-          </button>
-        </div>
+        
+        {role === 'admin' && (
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <label className="btn-primary" style={{ backgroundColor: '#10b981', cursor: 'pointer' }}>
+            📊 Import Excel
+               <input type="file" accept=".xlsx" onChange={handleImportExcel} style={{ display: 'none' }} />
+            </label>          
+            <button style={{ backgroundColor: '#2563eb', color: 'white', border: 'none', padding: '10px 15px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}
+                  onClick={() => setIsModalOpen(true)}>
+                  ➕ Tambah Transaksi
+            </button>
+          </div>
+        )}
       </div>
 
       <AddTransaksiModal 
@@ -145,17 +161,20 @@ export default function PenjualanDashboard() {
                       Rp {order.harga_total.toLocaleString('id-ID')}
                     </td>
                     <td style={{ textAlign: 'center' }}>
-                      {/* Tombol Edit dan Hapus */}
-                      <button 
-                        onClick={(e) => handleEditClick(e, order)}
-                        style={{ background: '#fef08a', color: '#854d0e', border: 'none', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer', marginRight: '8px', fontWeight: '600' }}>
-                        Edit
-                      </button>
-                      <button 
-                        onClick={(e) => handleDelete(e, order.id, order.order_id)}
-                        style={{ background: '#fecaca', color: '#b91c1c', border: 'none', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer', fontWeight: '600' }}>
-                        Hapus
-                      </button>
+                      {role === 'admin' && (
+                        <>
+                          <button 
+                            onClick={(e) => handleEditClick(e, order)}
+                            style={{ background: '#fef08a', color: '#854d0e', border: 'none', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer', marginRight: '8px', fontWeight: '600' }}>
+                            Edit
+                          </button>
+                          <button 
+                            onClick={(e) => handleDelete(e, order.id, order.order_id)}
+                            style={{ background: '#fecaca', color: '#b91c1c', border: 'none', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer', fontWeight: '600' }}>
+                            Hapus
+                          </button>
+                        </>
+                      )}
                     </td>
                   </tr>
 
@@ -171,6 +190,7 @@ export default function PenjualanDashboard() {
                                 <th>Merek & Unit</th>
                                 <th>Processor</th>
                                 <th>Spek (RAM/SSD)</th>
+                                <th>Kondisi</th>
                                 <th>Qty</th>
                                 <th>Subtotal</th>
                               </tr>
@@ -182,6 +202,7 @@ export default function PenjualanDashboard() {
                                   <td style={{ fontWeight: '500' }}>{item.merek} {item.nama_unit}</td>
                                   <td>{item.processor}</td>
                                   <td>{item.ram}GB / {item.ssd}GB</td>
+                                  <td><span className="kondisi-badge">{getKondisiText(item.kondisi)}</span></td>
                                   <td>{item.qty}</td>
                                   <td>Rp {item.sub_total.toLocaleString('id-ID')}</td>
                                 </tr>

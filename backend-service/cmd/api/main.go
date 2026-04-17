@@ -15,6 +15,7 @@ import (
 	"github.com/vk878930/skripsi-backend/internal/handler"
 	"github.com/vk878930/skripsi-backend/internal/repository"
 	"github.com/vk878930/skripsi-backend/internal/usecase"
+	"golang.org/x/crypto/bcrypt"
 )
 
 func main() {
@@ -36,6 +37,7 @@ func main() {
 
 	// 3. AUTO-MIGRATE
 	err = db.AutoMigrate(
+		&entity.User{},
 		&entity.RiwayatPrediksi{},
 		&entity.Penjualan{},
 		&entity.ItemPenjualan{},
@@ -43,6 +45,18 @@ func main() {
 
 	if err != nil {
 		log.Fatal("Gagal membuat tabel:", err)
+	}
+
+	// 4. SEED DEFAULT USERS
+	userRepo := repository.NewUserRepository(db)
+	count, _ := userRepo.Count()
+	if count == 0 {
+		hashedAdmin, _ := bcrypt.GenerateFromPassword([]byte("admin123"), bcrypt.DefaultCost)
+		hashedBoss, _ := bcrypt.GenerateFromPassword([]byte("boss123"), bcrypt.DefaultCost)
+		
+		userRepo.Create(&entity.User{Username: "admin", Password: string(hashedAdmin), Role: "admin"})
+		userRepo.Create(&entity.User{Username: "boss", Password: string(hashedBoss), Role: "boss"})
+		log.Println("Default users created: admin/admin123 & boss/boss123")
 	}
 	// 1. Inisialisasi Router Gin
 	router := gin.Default()
@@ -62,6 +76,13 @@ func main() {
 	penjualanRepo := repository.NewPenjualanRepository(db)
 	penjualanUsecase := usecase.NewPenjualanUsecase(penjualanRepo)
 	handler.NewPenjualanHandler(router, penjualanUsecase)
+
+	jwtSecret := os.Getenv("JWT_SECRET")
+	if jwtSecret == "" {
+		jwtSecret = "supersecretkey" // Fallback
+	}
+	userUsecase := usecase.NewUserUsecase(userRepo, jwtSecret)
+	handler.NewAuthHandler(router, userUsecase)
 
 	// 3. Jalankan Server
 
