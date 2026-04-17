@@ -4,6 +4,7 @@ import EstimasiForm from './components/EstimasiForm'
 import PenjualanDashboard from './components/PenjualanDashboard'
 import BossDashboard from './components/BossDashboard'
 import Login from './components/Login'
+import LaporanDashboard from './components/LaporanDashboard'
 import './App.css'
 
 // Komponen pelindung rute
@@ -69,6 +70,13 @@ const MainLayout = ({ children }) => {
             📊 Data Penjualan
           </button>
 
+          <button 
+            className={`nav-btn ${location.pathname === '/laporan' ? 'active' : ''}`}
+            onClick={() => navigate('/laporan')}
+          >
+            📄 Laporan
+          </button>
+
           <button className="nav-btn" onClick={handleLogout} style={{ color: '#ef4444' }}>
             🚪 Logout ({username})
           </button>
@@ -102,6 +110,12 @@ function App() {
         <Route path="/penjualan" element={
           <ProtectedRoute allowedRoles={['admin', 'boss']}>
             <MainLayout><PenjualanDashboard /></MainLayout>
+          </ProtectedRoute>
+        } />
+
+        <Route path="/laporan" element={
+          <ProtectedRoute allowedRoles={['admin', 'boss']}>
+            <MainLayout><LaporanDashboard /></MainLayout>
           </ProtectedRoute>
         } />
 

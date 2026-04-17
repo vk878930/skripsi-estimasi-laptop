@@ -301,3 +301,26 @@ button:disabled {
   display: inline-block;
   white-space: nowrap;
 }
+
+/* --- PRINT STYLES --- */
+@media print {
+  body {
+    background-color: white !important;
+  }
+  .no-print, .navbar {
+    display: none !important;
+  }
+  .content-area {
+    padding: 0 !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+  }
+  .printable-report {
+    border: none !important;
+    padding: 0 !important;
+  }
+  .report-table th, .report-table td {
+    border: 1px solid #000 !important;
+    color: #000 !important;
+  }
+}
