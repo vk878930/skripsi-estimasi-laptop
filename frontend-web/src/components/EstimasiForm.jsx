@@ -3,9 +3,13 @@ import axios from 'axios'
 
 export default function EstimasiForm() {
   const [formData, setFormData] = useState({ 
-    merek: 'Lenovo', processor: 'Intel Core i5', ram: 8, ssd: 256, tahun: 2021, kondisi: 4 
+    merek: 'Lenovo', processor: '', ram: 8, ssd: 256, tahun: 2021, kondisi: 4 
   })
+  const [procFamily, setProcFamily] = useState('Core i5')
+  const [procGen, setProcGen] = useState('8')
+  
   const [hasilEstimasi, setHasilEstimasi] = useState(null)
+  const [nearestNeighbors, setNearestNeighbors] = useState(null)
   const [loading, setLoading] = useState(false)
   
   // State untuk menyimpan data riwayat
@@ -39,9 +43,15 @@ export default function EstimasiForm() {
   const handleSubmit = async (e) => {
     e.preventDefault()
     setLoading(true)
+    // If user inputs "8350U", it becomes "Core i5-8350U". If they input "8", it becomes "Core i5-8"
+    // For Apple M1/M2/M3, we just send the family.
+    const finalProcessor = procFamily.includes('Apple') ? procFamily : `${procFamily}-${procGen}`
+    const payload = { ...formData, processor: finalProcessor }
+
     try {
-      const response = await axios.post('http://localhost:8080/api/estimasi', formData)
+      const response = await axios.post('http://localhost:8080/api/estimasi', payload)
       setHasilEstimasi(response.data.data.estimasi_harga_rupiah)
+      setNearestNeighbors(response.data.data.nearest_neighbors)
       
       // Setelah AI berhasil menebak, refresh otomatis tabel riwayat di bawah!
       fetchRiwayat() 
@@ -78,10 +88,32 @@ export default function EstimasiForm() {
             <label>Merek:</label>
             <input type="text" name="merek" value={formData.merek} onChange={handleChange} placeholder="Ex: Lenovo" required />
           </div>
+        </div>
+
+        <div className="form-row">
           <div className="input-group">
-            <label>Processor:</label>
-            <input type="text" name="processor" value={formData.processor} onChange={handleChange} placeholder="Ex: i5 Gen 8" required />
+            <label>Processor Family:</label>
+            <select value={procFamily} onChange={(e) => setProcFamily(e.target.value)}>
+              <option value="Celeron">Celeron</option>
+              <option value="Core i3">Intel Core i3</option>
+              <option value="Core i5">Intel Core i5</option>
+              <option value="Core i7">Intel Core i7</option>
+              <option value="Core i9">Intel Core i9</option>
+              <option value="Ryzen 3">AMD Ryzen 3</option>
+              <option value="Ryzen 5">AMD Ryzen 5</option>
+              <option value="Ryzen 7">AMD Ryzen 7</option>
+              <option value="Ryzen 9">AMD Ryzen 9</option>
+              <option value="Apple M1">Apple M1</option>
+              <option value="Apple M2">Apple M2</option>
+              <option value="Apple M3">Apple M3</option>
+            </select>
           </div>
+          {!procFamily.includes('Apple') && (
+            <div className="input-group">
+              <label>Model / Gen:</label>
+              <input type="text" value={procGen} onChange={(e) => setProcGen(e.target.value)} required placeholder="Ex: 8 atau 8350U" />
+            </div>
+          )}
         </div>
 
         <div className="form-row">
@@ -114,11 +146,26 @@ export default function EstimasiForm() {
 
       {/* --- HASIL ESTIMASI BESAR --- */}
       {hasilEstimasi && (
-        <div className="result-card" style={{ maxWidth: '500px', margin: '20px auto 0' }}>
+        <div className="result-card" style={{ maxWidth: '600px', margin: '20px auto 0' }}>
           <h3 style={{ margin: '0 0 10px', color: '#166534' }}>Taksiran Harga AI:</h3>
-          <h1 style={{ color: '#22c55e', margin: '0', fontSize: '2.5rem' }}>
+          <h1 style={{ color: '#22c55e', margin: '0 0 20px', fontSize: '2.5rem' }}>
             Rp {hasilEstimasi.toLocaleString('id-ID')}
           </h1>
+          
+          {nearestNeighbors && nearestNeighbors.length > 0 && (
+            <div style={{ textAlign: 'left', backgroundColor: '#f8fafc', padding: '15px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+              <h4 style={{ margin: '0 0 10px', color: '#334155' }}>🔍 Referensi Data AI (Nearest Neighbors):</h4>
+              <ul style={{ margin: 0, paddingLeft: '20px', color: '#475569', fontSize: '0.9rem' }}>
+                {nearestNeighbors.map((nb, idx) => (
+                  <li key={idx} style={{ marginBottom: '8px' }}>
+                    <strong>{nb.merek} {nb.processor}</strong> (RAM {nb.ram}GB, SSD {nb.ssd}GB, Thn {nb.tahun})
+                    <br />
+                    Terjual di harga: <strong style={{ color: '#0f172a' }}>Rp {nb.harga.toLocaleString('id-ID')}</strong>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
       )}
 
