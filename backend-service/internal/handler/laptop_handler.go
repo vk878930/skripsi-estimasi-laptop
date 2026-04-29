@@ -23,6 +23,8 @@ func NewLaptopHandler(r *gin.Engine, us usecase.LaptopUsecase) {
 	// Mendaftarkan routing endpoint
 	r.POST("/api/estimasi", handler.EstimasiHarga)
 	r.GET("/api/estimasi/riwayat", handler.AmbilRiwayatPrediksi)
+	r.POST("/api/estimasi/evaluate", handler.EvaluasiModel)
+	r.POST("/api/estimasi/update_k", handler.UpdateK)
 }
 
 // EstimasiHarga adalah fungsi yang menangani endpoint POST /api/estimasi
@@ -59,4 +61,40 @@ func (h *LaptopHandler) AmbilRiwayatPrediksi(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"data": data})
+}
+
+func (h *LaptopHandler) EvaluasiModel(c *gin.Context) {
+	var body struct {
+		K int `json:"k"`
+	}
+	if err := c.ShouldBindJSON(&body); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Format tidak valid, k harus berupa angka"})
+		return
+	}
+
+	hasil, err := h.laptopUsecase.EvaluasiModel(body.K)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"data": hasil})
+}
+
+func (h *LaptopHandler) UpdateK(c *gin.Context) {
+	var body struct {
+		K int `json:"k"`
+	}
+	if err := c.ShouldBindJSON(&body); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Format tidak valid, k harus berupa angka"})
+		return
+	}
+
+	hasil, err := h.laptopUsecase.UpdateK(body.K)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"data": hasil})
 }

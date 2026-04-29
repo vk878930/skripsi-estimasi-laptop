@@ -9,6 +9,8 @@ export default function EstimasiForm() {
   const [procGen, setProcGen] = useState('8')
   
   const [hasilEstimasi, setHasilEstimasi] = useState(null)
+  const [hargaBawah, setHargaBawah] = useState(null)
+  const [hargaAtas, setHargaAtas] = useState(null)
   const [nearestNeighbors, setNearestNeighbors] = useState(null)
   const [loading, setLoading] = useState(false)
   
@@ -51,6 +53,8 @@ export default function EstimasiForm() {
     try {
       const response = await axios.post('http://localhost:8080/api/estimasi', payload)
       setHasilEstimasi(response.data.data.estimasi_harga_rupiah)
+      setHargaBawah(response.data.data.harga_bawah)
+      setHargaAtas(response.data.data.harga_atas)
       setNearestNeighbors(response.data.data.nearest_neighbors)
       
       // Setelah AI berhasil menebak, refresh otomatis tabel riwayat di bawah!
@@ -148,9 +152,16 @@ export default function EstimasiForm() {
       {hasilEstimasi && (
         <div className="result-card" style={{ maxWidth: '600px', margin: '20px auto 0' }}>
           <h3 style={{ margin: '0 0 10px', color: '#166534' }}>Taksiran Harga AI:</h3>
-          <h1 style={{ color: '#22c55e', margin: '0 0 20px', fontSize: '2.5rem' }}>
-            Rp {hasilEstimasi.toLocaleString('id-ID')}
+          <h1 style={{ color: '#22c55e', margin: '0 0 5px', fontSize: '2.2rem' }}>
+            {hargaBawah && hargaAtas && hargaBawah !== hargaAtas ? 
+              `Rp ${hargaBawah.toLocaleString('id-ID')} - Rp ${hargaAtas.toLocaleString('id-ID')}` : 
+              `Rp ${hasilEstimasi.toLocaleString('id-ID')}`}
           </h1>
+          {hargaBawah && hargaAtas && hargaBawah !== hargaAtas && (
+            <p style={{ color: '#475569', marginTop: 0, marginBottom: '20px', fontSize: '0.9rem' }}>
+              *Nilai Tengah Prediksi: Rp {hasilEstimasi.toLocaleString('id-ID')}
+            </p>
+          )}
           
           {nearestNeighbors && nearestNeighbors.length > 0 && (
             <div style={{ textAlign: 'left', backgroundColor: '#f8fafc', padding: '15px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>

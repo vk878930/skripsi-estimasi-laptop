@@ -18,6 +18,8 @@ import (
 type LaptopUsecase interface {
 	DapatkanEstimasiHarga(spek entity.SpesifikasiLaptop) (map[string]interface{}, error)
 	DapatkanRiwayat() ([]entity.RiwayatPrediksi, error)
+	EvaluasiModel(k int) (map[string]interface{}, error)
+	UpdateK(k int) (map[string]interface{}, error)
 }
 
 type laptopUsecaseImpl struct {
@@ -85,4 +87,49 @@ func (u *laptopUsecaseImpl) DapatkanEstimasiHarga(spek entity.SpesifikasiLaptop)
 func (u *laptopUsecaseImpl) DapatkanRiwayat() ([]entity.RiwayatPrediksi, error) {
     // Usecase tinggal memanggil fungsi yang sudah kita buat di Repository tadi
     return u.laptopRepo.AmbilSemuaRiwayat()
+}
+
+func (u *laptopUsecaseImpl) EvaluasiModel(k int) (map[string]interface{}, error) {
+	reqBody, _ := json.Marshal(map[string]int{"k": k})
+	
+	// Assume pythonAPIUrl ends with /predict
+	evalUrl := u.pythonAPIUrl[:len(u.pythonAPIUrl)-8] + "/evaluate"
+	
+	response, err := http.Post(evalUrl, "application/json", bytes.NewBuffer(reqBody))
+	if err != nil {
+		return nil, errors.New("gagal menghubungi service ML untuk evaluasi")
+	}
+	defer response.Body.Close()
+
+	if response.StatusCode != http.StatusOK {
+		return nil, errors.New("mendapat respon error dari service ML")
+	}
+
+	bodyBytes, _ := io.ReadAll(response.Body)
+	var hasil map[string]interface{}
+	json.Unmarshal(bodyBytes, &hasil)
+	
+	return hasil, nil
+}
+
+func (u *laptopUsecaseImpl) UpdateK(k int) (map[string]interface{}, error) {
+	reqBody, _ := json.Marshal(map[string]int{"k": k})
+	
+	updateUrl := u.pythonAPIUrl[:len(u.pythonAPIUrl)-8] + "/update_k"
+	
+	response, err := http.Post(updateUrl, "application/json", bytes.NewBuffer(reqBody))
+	if err != nil {
+		return nil, errors.New("gagal menghubungi service ML untuk update K")
+	}
+	defer response.Body.Close()
+
+	if response.StatusCode != http.StatusOK {
+		return nil, errors.New("mendapat respon error dari service ML")
+	}
+
+	bodyBytes, _ := io.ReadAll(response.Body)
+	var hasil map[string]interface{}
+	json.Unmarshal(bodyBytes, &hasil)
+	
+	return hasil, nil
 }

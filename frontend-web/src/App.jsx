@@ -5,6 +5,7 @@ import PenjualanDashboard from './components/PenjualanDashboard'
 import BossDashboard from './components/BossDashboard'
 import Login from './components/Login'
 import LaporanDashboard from './components/LaporanDashboard'
+import ModelTuningDashboard from './components/ModelTuningDashboard'
 import './App.css'
 
 // Komponen pelindung rute
@@ -77,6 +78,13 @@ const MainLayout = ({ children }) => {
             📄 Laporan
           </button>
 
+          <button 
+            className={`nav-btn ${location.pathname === '/model-tuning' ? 'active' : ''}`}
+            onClick={() => navigate('/model-tuning')}
+          >
+            ⚙️ ML Tuning
+          </button>
+
           <button className="nav-btn" onClick={handleLogout} style={{ color: '#ef4444' }}>
             🚪 Logout ({username})
           </button>
@@ -116,6 +124,12 @@ function App() {
         <Route path="/laporan" element={
           <ProtectedRoute allowedRoles={['admin', 'boss']}>
             <MainLayout><LaporanDashboard /></MainLayout>
+          </ProtectedRoute>
+        } />
+
+        <Route path="/model-tuning" element={
+          <ProtectedRoute allowedRoles={['admin', 'boss']}>
+            <MainLayout><ModelTuningDashboard /></MainLayout>
           </ProtectedRoute>
         } />
 
