@@ -23,6 +23,7 @@ func NewPenjualanHandler(r *gin.Engine, u usecase.PenjualanUsecase) {
 	// Mendaftarkan 5 Endpoint CRUD untuk Penjualan
 	r.POST("/api/penjualan", handler.BuatTransaksi)
 	r.GET("/api/penjualan", handler.AmbilSemuaTransaksi)
+	r.GET("/api/penjualan/terpopuler", handler.AmbilLaptopTerpopuler)
 	r.POST("/api/penjualan/import", handler.ImportExcel)
 	r.GET("/api/penjualan/:id", handler.AmbilTransaksiByID)
 	r.PUT("/api/penjualan/:id", handler.UpdateTransaksi)
@@ -177,4 +178,17 @@ func (h *PenjualanHandler) ImportExcel(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"pesan": "Import Excel Berhasil!"})
+}
+
+// 7. READ LAPTOP TERPOPULER
+func (h *PenjualanHandler) AmbilLaptopTerpopuler(c *gin.Context) {
+	bulan := c.Query("bulan")
+	tahun := c.Query("tahun")
+
+	data, err := h.penjualanUsecase.DapatkanLaptopTerpopuler(bulan, tahun)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"data": data})
 }

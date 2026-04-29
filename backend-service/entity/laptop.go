@@ -52,3 +52,10 @@ type ItemPenjualan struct {
 	HargaTerjual int    `json:"harga_terjual"` // Harga per 1 unit
 	SubTotal     int    `json:"sub_total"`     // Qty * HargaTerjual
 }
+
+// Struct untuk Response Laporan Laptop Terpopuler
+type TrendingLaptop struct {
+	Merek        string `json:"merek"`
+	NamaUnit     string `json:"nama_unit"`
+	TotalTerjual int    `json:"total_terjual"`
+}

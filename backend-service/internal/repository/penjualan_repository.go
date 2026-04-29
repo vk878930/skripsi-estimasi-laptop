@@ -11,6 +11,7 @@ type PenjualanRepository interface {
 	AmbilTransaksiBerdasarkanID(id uint) (*entity.Penjualan, error)
 	UpdateTransaksi(penjualan *entity.Penjualan) error
 	HapusTransaksi(id uint) error
+	AmbilLaptopTerpopuler(bulan, tahun string) ([]entity.TrendingLaptop, error)
 }
 
 type penjualanRepositoryImpl struct {
@@ -62,4 +63,27 @@ func (r *penjualanRepositoryImpl) HapusTransaksi(id uint) error {
 	// Sihir GORM: Select("Items") memberitahu GORM untuk melakukan Cascade Delete.
 	// Artinya, saat Nota dihapus, semua Laptop yang tercatat di nota tersebut juga ikut terhapus otomatis!
 	return r.db.Select("Items").Delete(&entity.Penjualan{ID: id}).Error
+}
+
+// 6. READ TERPOPULER (Laporan Laptop Trending)
+func (r *penjualanRepositoryImpl) AmbilLaptopTerpopuler(bulan, tahun string) ([]entity.TrendingLaptop, error) {
+	var hasil []entity.TrendingLaptop
+	
+	query := r.db.Table("item_penjualans").
+		Select("item_penjualans.merek, item_penjualans.nama_unit, SUM(item_penjualans.qty) as total_terjual").
+		Joins("JOIN penjualans ON penjualans.id = item_penjualans.penjualan_id")
+		
+	if bulan != "" {
+		query = query.Where("EXTRACT(MONTH FROM penjualans.tanggal_jual) = ?", bulan)
+	}
+	if tahun != "" {
+		query = query.Where("EXTRACT(YEAR FROM penjualans.tanggal_jual) = ?", tahun)
+	}
+	
+	err := query.Group("item_penjualans.merek, item_penjualans.nama_unit").
+		Order("total_terjual DESC").
+		Limit(10).
+		Scan(&hasil).Error
+		
+	return hasil, err
 }

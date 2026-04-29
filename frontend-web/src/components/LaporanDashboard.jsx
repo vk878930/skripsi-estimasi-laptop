@@ -3,9 +3,10 @@ import axios from 'axios';
 import { Printer, FileText, Filter } from 'lucide-react';
 
 export default function LaporanDashboard() {
-  const [activeTab, setActiveTab] = useState('penjualan'); // 'penjualan' | 'estimasi'
+  const [activeTab, setActiveTab] = useState('penjualan'); // 'penjualan' | 'estimasi' | 'terpopuler'
   const [penjualanData, setPenjualanData] = useState([]);
   const [estimasiData, setEstimasiData] = useState([]);
+  const [terpopulerData, setTerpopulerData] = useState([]);
   const [loading, setLoading] = useState(true);
   
   // Filter state
@@ -38,6 +39,24 @@ export default function LaporanDashboard() {
   useEffect(() => {
     fetchData();
   }, []);
+
+  const fetchTerpopuler = async () => {
+    try {
+      const params = {};
+      if (selectedMonth) params.bulan = selectedMonth;
+      if (selectedYear) params.tahun = selectedYear;
+      const res = await axios.get('http://localhost:8080/api/penjualan/terpopuler', { params });
+      setTerpopulerData(res.data.data || []);
+    } catch (error) {
+      console.error("Error fetching terpopuler data:", error);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'terpopuler' || activeTab === 'penjualan') {
+      fetchTerpopuler();
+    }
+  }, [activeTab, selectedMonth, selectedYear]);
 
   const handlePrint = () => {
     window.print();
@@ -126,10 +145,24 @@ export default function LaporanDashboard() {
           >
             Laporan Estimasi Harga
           </button>
+          <button 
+            onClick={() => setActiveTab('terpopuler')}
+            style={{
+              padding: '10px 20px',
+              backgroundColor: activeTab === 'terpopuler' ? '#e2e8f0' : 'white',
+              color: '#0f172a',
+              border: '1px solid #cbd5e1',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontWeight: activeTab === 'terpopuler' ? 'bold' : 'normal'
+            }}
+          >
+            Laporan Laptop Terpopuler
+          </button>
         </div>
 
-        {/* Filters for Penjualan */}
-        {activeTab === 'penjualan' && (
+        {/* Filters for Penjualan and Terpopuler */}
+        {(activeTab === 'penjualan' || activeTab === 'terpopuler') && (
           <div style={{ display: 'flex', gap: '15px', alignItems: 'center', backgroundColor: 'white', padding: '15px', borderRadius: '8px', border: '1px solid #e2e8f0', marginBottom: '20px' }}>
             <Filter size={20} color="#64748b" />
             <span style={{ fontWeight: '500', color: '#475569' }}>Filter Bulan:</span>
@@ -196,7 +229,9 @@ export default function LaporanDashboard() {
             <h2 style={{ margin: 0, fontSize: '18px', color: '#000' }}>
               {activeTab === 'penjualan' 
                 ? `Laporan Penjualan ${selectedMonth ? `Bulan ${getMonthName(selectedMonth)} ${selectedYear}` : ''}`
-                : 'Laporan Riwayat Estimasi Harga'}
+                : activeTab === 'terpopuler'
+                  ? `Laporan Laptop Terpopuler ${selectedMonth ? `Bulan ${getMonthName(selectedMonth)} ${selectedYear}` : ''}`
+                  : 'Laporan Riwayat Estimasi Harga'}
             </h2>
           </div>
 
@@ -212,6 +247,13 @@ export default function LaporanDashboard() {
                     <th style={{ border: '1px solid #000', padding: '8px', backgroundColor: '#f8fafc' }}>Pembeli</th>
                     <th style={{ border: '1px solid #000', padding: '8px', backgroundColor: '#f8fafc' }}>Total Item</th>
                     <th style={{ border: '1px solid #000', padding: '8px', backgroundColor: '#f8fafc' }}>Total Harga</th>
+                  </tr>
+                ) : activeTab === 'terpopuler' ? (
+                  <tr>
+                    <th style={{ border: '1px solid #000', padding: '8px', backgroundColor: '#f8fafc' }}>No</th>
+                    <th style={{ border: '1px solid #000', padding: '8px', backgroundColor: '#f8fafc' }}>Merek</th>
+                    <th style={{ border: '1px solid #000', padding: '8px', backgroundColor: '#f8fafc' }}>Seri / Model</th>
+                    <th style={{ border: '1px solid #000', padding: '8px', backgroundColor: '#f8fafc' }}>Total Unit Terjual</th>
                   </tr>
                 ) : (
                   <tr>
@@ -242,6 +284,19 @@ export default function LaporanDashboard() {
                     ))
                   ) : (
                     <tr><td colSpan="6" style={{ border: '1px solid #000', padding: '8px', textAlign: 'center' }}>Tidak ada data penjualan</td></tr>
+                  )
+                ) : activeTab === 'terpopuler' ? (
+                  terpopulerData.length > 0 ? (
+                    terpopulerData.map((item, index) => (
+                      <tr key={index}>
+                        <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'center' }}>{index + 1}</td>
+                        <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'center' }}>{item.merek}</td>
+                        <td style={{ border: '1px solid #000', padding: '8px' }}>{item.nama_unit}</td>
+                        <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'center' }}>{item.total_terjual} Unit</td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr><td colSpan="4" style={{ border: '1px solid #000', padding: '8px', textAlign: 'center' }}>Tidak ada data laptop terpopuler</td></tr>
                   )
                 ) : (
                   estimasiData.length > 0 ? (

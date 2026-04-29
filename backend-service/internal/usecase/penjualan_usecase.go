@@ -11,6 +11,7 @@ type PenjualanUsecase interface {
 	DapatkanTransaksiBerdasarkanID(id uint) (*entity.Penjualan, error)
 	PerbaruiTransaksi(penjualan *entity.Penjualan) error
 	HapusTransaksi(id uint) error
+	DapatkanLaptopTerpopuler(bulan, tahun string) ([]entity.TrendingLaptop, error)
 }
 
 type penjualanUsecaseImpl struct {
@@ -43,4 +44,8 @@ func (u *penjualanUsecaseImpl) PerbaruiTransaksi(penjualan *entity.Penjualan) er
 
 func (u *penjualanUsecaseImpl) HapusTransaksi(id uint) error {
 	return u.penjualanRepo.HapusTransaksi(id)
+}
+
+func (u *penjualanUsecaseImpl) DapatkanLaptopTerpopuler(bulan, tahun string) ([]entity.TrendingLaptop, error) {
+	return u.penjualanRepo.AmbilLaptopTerpopuler(bulan, tahun)
 }
