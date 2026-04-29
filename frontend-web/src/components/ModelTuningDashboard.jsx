@@ -13,7 +13,13 @@ export default function ModelTuningDashboard() {
     setMessage(null)
     try {
       const response = await axios.post('http://localhost:8080/api/estimasi/evaluate', { k: parseInt(kValue) })
-      setEvaluationResult(response.data.data)
+      const resultData = response.data.data;
+      if (resultData && resultData.status === 'error') {
+        setMessage({ type: 'error', text: resultData.message || "Gagal melakukan evaluasi model." })
+        setEvaluationResult(null)
+      } else {
+        setEvaluationResult(resultData)
+      }
     } catch (error) {
       console.error(error)
       setMessage({ type: 'error', text: error.response?.data?.error || "Gagal melakukan evaluasi model." })
@@ -29,7 +35,12 @@ export default function ModelTuningDashboard() {
     setMessage(null)
     try {
       const response = await axios.post('http://localhost:8080/api/estimasi/update_k', { k: parseInt(evaluationResult.k) })
-      setMessage({ type: 'success', text: response.data.data.message || `Berhasil mengatur K=${evaluationResult.k} sebagai default model.` })
+      const resultData = response.data.data;
+      if (resultData && resultData.status === 'error') {
+        setMessage({ type: 'error', text: resultData.message || "Gagal mengatur model default." })
+      } else {
+        setMessage({ type: 'success', text: resultData.message || `Berhasil mengatur K=${evaluationResult.k} sebagai default model.` })
+      }
     } catch (error) {
       console.error(error)
       setMessage({ type: 'error', text: "Gagal mengatur model default." })

@@ -106,10 +106,14 @@ def train_model():
         scaler = StandardScaler()
         X_scaled = scaler.fit_transform(X)
 
-        if current_k is not None:
+        if current_k is not None and current_k > 0:
             n_neighbors = current_k
         else:
             n_neighbors = 2 if len(df) < 5 else 5
+            
+        # Ensure k is not larger than data size
+        if n_neighbors > len(df):
+            n_neighbors = len(df)
             
         knn_model = KNeighborsRegressor(n_neighbors=n_neighbors)
         knn_model.fit(X_scaled, y)
@@ -117,6 +121,7 @@ def train_model():
 
     except Exception as e:
         print(f"Gagal koneksi atau training: {e}")
+        knn_model = None # Reset model so predict doesn't crash
 
 # Latih model saat startup
 train_model()
@@ -239,6 +244,9 @@ def evaluate_model(req: EvaluateRequest):
         
         # Train temp model
         eval_k = req.k
+        if eval_k < 1:
+            eval_k = 1
+            
         # Ensure k is not larger than train size
         if eval_k > len(X_train):
             eval_k = len(X_train)
@@ -263,8 +271,15 @@ def evaluate_model(req: EvaluateRequest):
 @app.post("/update_k")
 def update_k(req: EvaluateRequest):
     global current_k
+    if req.k < 1:
+        return {"status": "error", "message": "Nilai K minimal harus 1."}
+        
     current_k = req.k
     train_model()
+    # Check if training succeeded
+    if knn_model is None:
+        return {"status": "error", "message": "Gagal melatih ulang model dengan K tersebut."}
+        
     return {"status": "success", "message": f"Global K berhasil diubah menjadi {req.k} dan model dilatih ulang."}
 
 @app.post("/retrain")
