@@ -8,9 +8,14 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: skripsi_laptop
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   ml-service:
     build:
@@ -20,7 +25,8 @@ services:
     environment:
       - DB_URI=postgresql://postgres:postgres@db:5432/skripsi_laptop
     depends_on:
-      - db
+      db:
+        condition: service_healthy
 
   backend-service:
     build:
@@ -31,8 +37,10 @@ services:
       - DB_DSN=host=db user=postgres password=postgres dbname=skripsi_laptop port=5432 sslmode=disable
       - PYTHON_ML_URL=http://ml-service:8000/predict
     depends_on:
-      - db
-      - ml-service
+      db:
+        condition: service_healthy
+      ml-service:
+        condition: service_started
 
   frontend-web:
     build:
