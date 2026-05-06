@@ -146,6 +146,11 @@ func (h *PenjualanHandler) ImportExcel(c *gin.Context) {
 			continue
 		} // Lewati header
 
+		// Skip baris yang kosong atau tidak memiliki kolom yang cukup
+		if len(row) < 13 {
+			continue
+		}
+
 		orderID := row[0]
 		ram, _ := strconv.Atoi(row[7])
 		ssd, _ := strconv.Atoi(row[8])

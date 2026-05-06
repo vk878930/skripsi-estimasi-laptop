@@ -40,7 +40,7 @@ type Penjualan struct {
 type ItemPenjualan struct {
 	ID           uint   `gorm:"primaryKey" json:"id"` // ID Unik untuk baris ini
 	PenjualanID  uint   `json:"penjualan_id"`         // <--- INI WAJIB ADA (Penghubung ke ID Transaksi)
-	Barcode      string `json:"barcode"`              // Pakai string agar angka nol di depan tidak hilang
+	Barcode      string `gorm:"uniqueIndex" json:"barcode"`              // Pakai string agar angka nol di depan tidak hilang
 	Merek        string `json:"merek"`
 	NamaUnit     string `json:"nama_unit"`
 	Processor    string `json:"processor"`
