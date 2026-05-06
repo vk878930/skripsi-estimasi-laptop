@@ -27,7 +27,17 @@ func NewLaptopHandler(r *gin.Engine, us usecase.LaptopUsecase) {
 	r.POST("/api/estimasi/update_k", handler.UpdateK)
 }
 
-// EstimasiHarga adalah fungsi yang menangani endpoint POST /api/estimasi
+// EstimasiHarga godoc
+// @Summary Calculate laptop price estimation
+// @Description Send laptop specification to get price estimation from ML service
+// @Tags Estimasi
+// @Accept json
+// @Produce json
+// @Param spek body entity.SpesifikasiLaptop true "Laptop Specification"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]interface{}
+// @Failure 500 {object} map[string]interface{}
+// @Router /estimasi [post]
 func (h *LaptopHandler) EstimasiHarga(c *gin.Context) {
 	var spek entity.SpesifikasiLaptop
 
@@ -51,7 +61,14 @@ func (h *LaptopHandler) EstimasiHarga(c *gin.Context) {
 	})
 }
 
-
+// AmbilRiwayatPrediksi godoc
+// @Summary Get all price estimation history
+// @Description Retrieve the history of all price estimations requested
+// @Tags Estimasi
+// @Produce json
+// @Success 200 {object} map[string]interface{}
+// @Failure 500 {object} map[string]interface{}
+// @Router /estimasi/riwayat [get]
 func (h *LaptopHandler) AmbilRiwayatPrediksi(c *gin.Context) {
 	// Panggil fungsi dari usecase (Sesuaikan nama fungsinya dengan yang ada di usecase kamu)
 	data, err := h.laptopUsecase.DapatkanRiwayat() 

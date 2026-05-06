@@ -1,0 +1,77 @@
+basePath: /api
+definitions:
+  entity.SpesifikasiLaptop:
+    properties:
+      kondisi:
+        type: integer
+      merek:
+        type: string
+      processor:
+        type: string
+      ram:
+        type: integer
+      ssd:
+        type: integer
+      tahun:
+        type: integer
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: Backend API for Thesis Laptop Price Estimator application
+  title: Laptop Price Estimator API
+  version: "1.0"
+paths:
+  /estimasi:
+    post:
+      consumes:
+      - application/json
+      description: Send laptop specification to get price estimation from ML service
+      parameters:
+      - description: Laptop Specification
+        in: body
+        name: spek
+        required: true
+        schema:
+          $ref: '#/definitions/entity.SpesifikasiLaptop'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Calculate laptop price estimation
+      tags:
+      - Estimasi
+  /estimasi/riwayat:
+    get:
+      description: Retrieve the history of all price estimations requested
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get all price estimation history
+      tags:
+      - Estimasi
+swagger: "2.0"

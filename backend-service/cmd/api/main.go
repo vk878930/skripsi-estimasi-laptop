@@ -1,3 +1,9 @@
+// @title Laptop Price Estimator API
+// @version 1.0
+// @description Backend API for Thesis Laptop Price Estimator application
+// @host localhost:8080
+// @BasePath /api
+
 package main
 
 import (
@@ -6,16 +12,19 @@ import (
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
-	"github.com/joho/godotenv" // <-- Import godotenv
+	"github.com/joho/godotenv"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 
-	// Sesuaikan "skripsi-backend" dengan nama module di file go.mod kamu
 	"github.com/vk878930/skripsi-backend/entity"
 	"github.com/vk878930/skripsi-backend/internal/handler"
 	"github.com/vk878930/skripsi-backend/internal/repository"
 	"github.com/vk878930/skripsi-backend/internal/usecase"
 	"golang.org/x/crypto/bcrypt"
+
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
+	_ "github.com/vk878930/skripsi-backend/docs" // Important for swagger
 )
 
 func main() {
@@ -64,10 +73,9 @@ func main() {
 	router.Use(cors.Default())
 
 	// 2. Setup Dependency Injection
-	// URL Python kita masukkan di sini agar suatu saat mudah diganti ke .env
-	pythonMLUrl := os.Getenv("PYTHON_ML_URL") // Ambil URL Python dari .env juga
+	pythonMLUrl := os.Getenv("PYTHON_ML_URL")
 	if pythonMLUrl == "" {
-		pythonMLUrl = "http://localhost:8000/predict" // Fallback jika kosong
+		pythonMLUrl = "http://localhost:8000/predict"
 	}
 	laptopRepo := repository.NewLaptopRepository(db)
 	laptopUsecase := usecase.NewLaptopUsecase(pythonMLUrl, laptopRepo)
@@ -84,8 +92,10 @@ func main() {
 	userUsecase := usecase.NewUserUsecase(userRepo, jwtSecret)
 	handler.NewAuthHandler(router, userUsecase)
 
-	// 3. Jalankan Server
+	// Swagger route
+	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
+	// 3. Jalankan Server
 	log.Println("Backend Golang berjalan di port 8080...")
 	router.Run(":8080")
 }

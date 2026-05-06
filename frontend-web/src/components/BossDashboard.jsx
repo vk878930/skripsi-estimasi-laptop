@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { BarChart3, TrendingUp, Laptop, DollarSign } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
 
 export default function BossDashboard() {
   const [stats, setStats] = useState({
@@ -9,6 +10,7 @@ export default function BossDashboard() {
     totalRevenue: 0,
     averagePrice: 0
   });
+  const [chartData, setChartData] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -19,14 +21,27 @@ export default function BossDashboard() {
         
         let totalUnits = 0;
         let totalRevenue = 0;
+        const monthlyDataMap = {};
         
         data.forEach(order => {
           totalRevenue += order.harga_total;
+          
+          const date = new Date(order.tanggal_jual);
+          const monthYear = date.toLocaleString('id-ID', { month: 'short', year: 'numeric' });
+          if (!monthlyDataMap[monthYear]) {
+            monthlyDataMap[monthYear] = { name: monthYear, revenue: 0, dateObj: date };
+          }
+          monthlyDataMap[monthYear].revenue += order.harga_total;
+
           order.items?.forEach(item => {
             totalUnits += item.qty;
           });
         });
 
+        // Convert map to sorted array
+        const sortedChartData = Object.values(monthlyDataMap).sort((a, b) => a.dateObj - b.dateObj);
+
+        setChartData(sortedChartData);
         setStats({
           totalSales: data.length,
           totalUnits: totalUnits,
@@ -94,6 +109,29 @@ export default function BossDashboard() {
             <p style={{ margin: 0, fontSize: '0.9rem', color: '#64748b', fontWeight: '500' }}>Total Pendapatan</p>
             <h3 style={{ margin: '5px 0 0', fontSize: '1.3rem', color: '#0f172a' }}>Rp {stats.totalRevenue.toLocaleString('id-ID')}</h3>
           </div>
+        </div>
+      </div>
+
+      <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)', border: '1px solid #e2e8f0', marginBottom: '40px' }}>
+        <h3 style={{ marginTop: 0, marginBottom: '20px', color: '#0f172a' }}>Grafik Pendapatan Bulanan</h3>
+        <div style={{ height: '350px', width: '100%' }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={chartData} margin={{ top: 10, right: 10, left: 20, bottom: 20 }}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+              <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#64748b'}} dy={10} />
+              <YAxis 
+                tickFormatter={(value) => `Rp ${(value / 1000000).toFixed(0)}M`} 
+                axisLine={false} 
+                tickLine={false} 
+                tick={{fill: '#64748b'}}
+              />
+              <RechartsTooltip 
+                formatter={(value) => [`Rp ${value.toLocaleString('id-ID')}`, 'Pendapatan']}
+                contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}
+              />
+              <Bar dataKey="revenue" fill="#3b82f6" radius={[6, 6, 0, 0]} maxBarSize={60} />
+            </BarChart>
+          </ResponsiveContainer>
         </div>
       </div>
       

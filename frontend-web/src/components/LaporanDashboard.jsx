@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Printer, FileText, Filter } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
 
 export default function LaporanDashboard() {
   const [activeTab, setActiveTab] = useState('penjualan'); // 'penjualan' | 'estimasi' | 'terpopuler'
@@ -234,6 +235,21 @@ export default function LaporanDashboard() {
                   : 'Laporan Riwayat Estimasi Harga'}
             </h2>
           </div>
+
+          {/* Chart for Terpopuler */}
+          {activeTab === 'terpopuler' && terpopulerData.length > 0 && (
+            <div style={{ height: '250px', width: '100%', marginBottom: '30px' }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={terpopulerData.slice(0, 10)} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <XAxis dataKey="nama_unit" tick={{fontSize: 10}} interval={0} angle={-15} textAnchor="end" height={60} />
+                  <YAxis tick={{fontSize: 12}} />
+                  <RechartsTooltip />
+                  <Bar dataKey="total_terjual" fill="#16a34a" name="Total Terjual (Unit)" radius={[4, 4, 0, 0]} maxBarSize={50} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
 
           {/* Table */}
           <div style={{ width: '100%', overflowX: 'auto' }}>

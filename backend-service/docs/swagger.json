@@ -1,0 +1,115 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "description": "Backend API for Thesis Laptop Price Estimator application",
+        "title": "Laptop Price Estimator API",
+        "contact": {},
+        "version": "1.0"
+    },
+    "host": "localhost:8080",
+    "basePath": "/api",
+    "paths": {
+        "/estimasi": {
+            "post": {
+                "description": "Send laptop specification to get price estimation from ML service",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Estimasi"
+                ],
+                "summary": "Calculate laptop price estimation",
+                "parameters": [
+                    {
+                        "description": "Laptop Specification",
+                        "name": "spek",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/entity.SpesifikasiLaptop"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/estimasi/riwayat": {
+            "get": {
+                "description": "Retrieve the history of all price estimations requested",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Estimasi"
+                ],
+                "summary": "Get all price estimation history",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "entity.SpesifikasiLaptop": {
+            "type": "object",
+            "properties": {
+                "kondisi": {
+                    "type": "integer"
+                },
+                "merek": {
+                    "type": "string"
+                },
+                "processor": {
+                    "type": "string"
+                },
+                "ram": {
+                    "type": "integer"
+                },
+                "ssd": {
+                    "type": "integer"
+                },
+                "tahun": {
+                    "type": "integer"
+                }
+            }
+        }
+    }
+}
