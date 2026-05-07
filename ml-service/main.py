@@ -15,7 +15,8 @@ app = FastAPI(title="Laptop Price Estimator API")
 
 # Database Connection (from backend .env mostly, but hardcoded here for simplicity or using env)
 DB_URI = os.getenv("DB_URI", "postgresql://postgres:postgres@localhost:5432/skripsi_laptop")
-engine = create_engine(DB_URI)
+# OPTIMIZATION: Added Connection Pooling to prevent DB timeouts during concurrent access
+engine = create_engine(DB_URI, pool_size=10, max_overflow=20)
 
 # Global variables for model
 knn_model = None
@@ -23,6 +24,7 @@ scaler = None
 model_columns = []
 df_original = None
 current_k = None
+X_scaled_global = None
 
 def parse_processor(proc_str):
     proc_str = str(proc_str).lower()
@@ -66,10 +68,11 @@ def parse_processor(proc_str):
             match = re.search(r'ryzen\s*\d\s*[- ]?(\d{1})(?!\d)', proc_str)
             if match: gen = int(match.group(1))
             
-    return pd.Series([family, gen])
+    # OPTIMIZATION: Return tuple instead of pd.Series for faster vectorized processing
+    return family, gen
 
 def train_model():
-    global knn_model, scaler, model_columns, df_original, current_k
+    global knn_model, scaler, model_columns, df_original, current_k, X_scaled_global
     print("Membaca data dari database untuk training KNN...")
     try:
         # Load from database
@@ -91,7 +94,9 @@ def train_model():
         df_original = df.copy()
 
         # Parse Processor into Family and Gen
-        df[['proc_family', 'proc_gen']] = df['processor'].apply(parse_processor)
+        # OPTIMIZATION: Use tolist() conversion which is much faster than returning pd.Series row by row
+        parsed_procs = df['processor'].apply(parse_processor).tolist()
+        df[['proc_family', 'proc_gen']] = pd.DataFrame(parsed_procs, index=df.index)
         df = df.drop(columns=['processor'])
 
         # One-Hot Encoding untuk Merek dan Processor
@@ -105,6 +110,7 @@ def train_model():
 
         scaler = StandardScaler()
         X_scaled = scaler.fit_transform(X)
+        X_scaled_global = X_scaled
 
         if current_k is not None and current_k > 0:
             n_neighbors = current_k
@@ -160,7 +166,8 @@ def prediksi_harga(spek: SpesifikasiLaptop):
     }])
 
     # Parse Processor into Family and Gen
-    input_df[['proc_family', 'proc_gen']] = input_df['processor'].apply(parse_processor)
+    parsed_input = input_df['processor'].apply(parse_processor).tolist()
+    input_df[['proc_family', 'proc_gen']] = pd.DataFrame(parsed_input, index=input_df.index)
     input_df = input_df.drop(columns=['processor'])
 
     # Lakukan One-Hot Encoding sesuai format input
@@ -181,21 +188,38 @@ def prediksi_harga(spek: SpesifikasiLaptop):
     # Explainability (XAI): Get nearest neighbors
     distances, indices = knn_model.kneighbors(input_scaled)
     nearest_indices = indices[0]
+    nearest_distances = distances[0]
     
     neighbors_list = []
     if df_original is not None:
-        for idx in nearest_indices:
+        for i, idx in enumerate(nearest_indices):
             if idx < len(df_original):
                 row = df_original.iloc[idx]
+                
+                # Detailed calculation breakdown
+                perhitungan = []
+                for j, col in enumerate(model_columns):
+                    inp_val = float(input_scaled[0][j])
+                    nb_val = float(X_scaled_global[idx][j])
+                    sq_diff = (inp_val - nb_val) ** 2
+                    if sq_diff > 0.001:
+                        perhitungan.append({
+                            "fitur": col,
+                            "input": round(inp_val, 4),
+                            "neighbor": round(nb_val, 4),
+                            "squared_diff": round(sq_diff, 4)
+                        })
+                
                 neighbors_list.append({
                     "merek": str(row["merek"]),
                     "processor": str(row["processor"]),
                     "ram": int(row["ram"]),
                     "ssd": int(row["ssd"]),
                     "tahun": int(row["tahun"]),
-                    "harga": int(row["harga"])
+                    "harga": int(row["harga"]),
+                    "jarak": float(nearest_distances[i]),
+                    "perhitungan_jarak": perhitungan
                 })
-
     harga_bawah = int(prediksi[0])
     harga_atas = int(prediksi[0])
     
@@ -209,13 +233,23 @@ def prediksi_harga(spek: SpesifikasiLaptop):
         harga_bawah = max(0, int(prediksi[0] - std_dev))
         harga_atas = int(prediksi[0] + std_dev)
 
+    scaler_stats = {}
+    if scaler is not None and len(scaler.mean_) == len(model_columns):
+        for j, col in enumerate(model_columns):
+            if col in ["ram", "ssd", "tahun", "kondisi"]:
+                scaler_stats[col] = {
+                    "mean": round(float(scaler.mean_[j]), 4),
+                    "scale": round(float(scaler.scale_[j]), 4)
+                }
+
     return {
         "status": "success",
         "spesifikasi_input": spek.model_dump(),
         "estimasi_harga_rupiah": int(prediksi[0]),
         "harga_bawah": harga_bawah,
         "harga_atas": harga_atas,
-        "nearest_neighbors": neighbors_list
+        "nearest_neighbors": neighbors_list,
+        "scaler_stats": scaler_stats
     }
 
 class EvaluateRequest(BaseModel):
@@ -229,7 +263,8 @@ def evaluate_model(req: EvaluateRequest):
         
     try:
         df = df_original.copy()
-        df[['proc_family', 'proc_gen']] = df['processor'].apply(parse_processor)
+        parsed_eval = df['processor'].apply(parse_processor).tolist()
+        df[['proc_family', 'proc_gen']] = pd.DataFrame(parsed_eval, index=df.index)
         df = df.drop(columns=['processor'])
         df_encoded = pd.get_dummies(df, columns=["merek", "proc_family"], drop_first=False)
         

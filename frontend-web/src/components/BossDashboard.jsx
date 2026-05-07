@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { BarChart3, TrendingUp, Laptop, DollarSign } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
+
+const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316'];
 
 export default function BossDashboard() {
   const [stats, setStats] = useState({
@@ -11,6 +13,7 @@ export default function BossDashboard() {
     averagePrice: 0
   });
   const [chartData, setChartData] = useState([]);
+  const [brandData, setBrandData] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -22,6 +25,7 @@ export default function BossDashboard() {
         let totalUnits = 0;
         let totalRevenue = 0;
         const monthlyDataMap = {};
+        const brandDataMap = {};
         
         data.forEach(order => {
           totalRevenue += order.harga_total;
@@ -35,13 +39,20 @@ export default function BossDashboard() {
 
           order.items?.forEach(item => {
             totalUnits += item.qty;
+            
+            if (!brandDataMap[item.merek]) {
+              brandDataMap[item.merek] = { name: item.merek, value: 0 };
+            }
+            brandDataMap[item.merek].value += item.qty;
           });
         });
 
         // Convert map to sorted array
         const sortedChartData = Object.values(monthlyDataMap).sort((a, b) => a.dateObj - b.dateObj);
+        const sortedBrandData = Object.values(brandDataMap).sort((a, b) => b.value - a.value);
 
         setChartData(sortedChartData);
+        setBrandData(sortedBrandData);
         setStats({
           totalSales: data.length,
           totalUnits: totalUnits,
@@ -112,26 +123,58 @@ export default function BossDashboard() {
         </div>
       </div>
 
-      <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)', border: '1px solid #e2e8f0', marginBottom: '40px' }}>
-        <h3 style={{ marginTop: 0, marginBottom: '20px', color: '#0f172a' }}>Grafik Pendapatan Bulanan</h3>
-        <div style={{ height: '350px', width: '100%' }}>
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={chartData} margin={{ top: 10, right: 10, left: 20, bottom: 20 }}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-              <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#64748b'}} dy={10} />
-              <YAxis 
-                tickFormatter={(value) => `Rp ${(value / 1000000).toFixed(0)}M`} 
-                axisLine={false} 
-                tickLine={false} 
-                tick={{fill: '#64748b'}}
-              />
-              <RechartsTooltip 
-                formatter={(value) => [`Rp ${value.toLocaleString('id-ID')}`, 'Pendapatan']}
-                contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}
-              />
-              <Bar dataKey="revenue" fill="#3b82f6" radius={[6, 6, 0, 0]} maxBarSize={60} />
-            </BarChart>
-          </ResponsiveContainer>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '20px', marginBottom: '40px' }}>
+        <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)', border: '1px solid #e2e8f0' }}>
+          <h3 style={{ marginTop: 0, marginBottom: '20px', color: '#0f172a' }}>Grafik Pendapatan Bulanan</h3>
+          <div style={{ height: '350px', width: '100%' }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={chartData} margin={{ top: 10, right: 10, left: 20, bottom: 20 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#64748b'}} dy={10} />
+                <YAxis 
+                  tickFormatter={(value) => `Rp ${(value / 1000000).toFixed(0)}M`} 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{fill: '#64748b'}}
+                />
+                <RechartsTooltip 
+                  formatter={(value) => [`Rp ${value.toLocaleString('id-ID')}`, 'Pendapatan']}
+                  contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}
+                />
+                <Bar dataKey="revenue" fill="#3b82f6" radius={[6, 6, 0, 0]} maxBarSize={60} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)', border: '1px solid #e2e8f0' }}>
+          <h3 style={{ marginTop: 0, marginBottom: '20px', color: '#0f172a' }}>Distribusi Penjualan Merek</h3>
+          <div style={{ height: '350px', width: '100%' }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={brandData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={70}
+                  outerRadius={110}
+                  paddingAngle={5}
+                  dataKey="value"
+                  label={({name, percent}) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  labelLine={false}
+                >
+                  {brandData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <RechartsTooltip 
+                  formatter={(value) => [`${value} Unit`, 'Terjual']}
+                  contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}
+                />
+                <Legend verticalAlign="bottom" height={36} iconType="circle" />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
         </div>
       </div>
       

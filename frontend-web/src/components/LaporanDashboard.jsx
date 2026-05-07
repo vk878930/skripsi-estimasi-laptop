@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { Printer, FileText, Filter } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
@@ -41,7 +41,7 @@ export default function LaporanDashboard() {
     fetchData();
   }, []);
 
-  const fetchTerpopuler = async () => {
+  const fetchTerpopuler = useCallback(async () => {
     try {
       const params = {};
       if (selectedMonth) params.bulan = selectedMonth;
@@ -51,13 +51,13 @@ export default function LaporanDashboard() {
     } catch (error) {
       console.error("Error fetching terpopuler data:", error);
     }
-  };
+  }, [selectedMonth, selectedYear]);
 
   useEffect(() => {
     if (activeTab === 'terpopuler' || activeTab === 'penjualan') {
       fetchTerpopuler();
     }
-  }, [activeTab, selectedMonth, selectedYear]);
+  }, [activeTab, fetchTerpopuler]);
 
   const handlePrint = () => {
     window.print();

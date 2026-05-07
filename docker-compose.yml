@@ -47,6 +47,11 @@ services:
       context: ./frontend-web
     ports:
       - "5173:5173"
+    volumes:
+      - ./frontend-web/src:/app/src
+      - ./frontend-web/public:/app/public
+      - ./frontend-web/index.html:/app/index.html
+      - ./frontend-web/vite.config.js:/app/vite.config.js
     depends_on:
       - backend-service
 

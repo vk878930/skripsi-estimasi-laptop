@@ -122,12 +122,14 @@ export default function PenjualanDashboard() {
         onRefresh={fetchPenjualan} 
       />
 
-      <EditTransaksiModal 
-        isOpen={isEditModalOpen} 
-        onClose={() => setIsEditModalOpen(false)} 
-        onRefresh={fetchPenjualan} 
-        initialData={selectedOrder}
-      />
+      {isEditModalOpen && (
+        <EditTransaksiModal 
+          isOpen={isEditModalOpen} 
+          onClose={() => setIsEditModalOpen(false)} 
+          onRefresh={fetchPenjualan} 
+          initialData={selectedOrder}
+        />
+      )}
 
       <div className="table-card">
         {loading ? (

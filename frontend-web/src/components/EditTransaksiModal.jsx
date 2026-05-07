@@ -1,26 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import axios from 'axios';
 
 export default function EditTransaksiModal({ isOpen, onClose, onRefresh, initialData }) {
   const [header, setHeader] = useState({
-    order_id: '',
-    nama_pembeli: '',
-    tanggal_jual: '',
+    order_id: initialData?.order_id || '',
+    nama_pembeli: initialData?.nama_pembeli || '',
+    tanggal_jual: initialData?.tanggal_jual ? new Date(initialData.tanggal_jual).toISOString().split('T')[0] : '',
   });
 
-  const [items, setItems] = useState([]);
-
-  // Mengisi form saat modal dibuka dan ada data awal
-  useEffect(() => {
-    if (isOpen && initialData) {
-      setHeader({
-        order_id: initialData.order_id,
-        nama_pembeli: initialData.nama_pembeli,
-        tanggal_jual: new Date(initialData.tanggal_jual).toISOString().split('T')[0],
-      });
-      setItems(initialData.items || []);
-    }
-  }, [isOpen, initialData]);
+  const [items, setItems] = useState(initialData?.items || []);
 
   if (!isOpen) return null;
 

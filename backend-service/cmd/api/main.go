@@ -44,6 +44,13 @@ func main() {
 		log.Fatal("Gagal connect ke database:", err)
 	}
 
+	// 2.5 DATABASE CONNECTION POOLING (OPTIMIZATION)
+	sqlDB, err := db.DB()
+	if err == nil {
+		sqlDB.SetMaxIdleConns(10)
+		sqlDB.SetMaxOpenConns(100)
+	}
+
 	// 3. AUTO-MIGRATE
 	err = db.AutoMigrate(
 		&entity.User{},
@@ -70,7 +77,12 @@ func main() {
 	// 1. Inisialisasi Router Gin
 	router := gin.Default()
 
-	router.Use(cors.Default())
+	// 2. SETUP CORS (SECURITY OPTIMIZATION)
+	corsConfig := cors.DefaultConfig()
+	corsConfig.AllowOrigins = []string{"http://localhost:5173", "http://127.0.0.1:5173"} // Batasi hanya domain frontend
+	corsConfig.AllowMethods = []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"}
+	corsConfig.AllowHeaders = []string{"Origin", "Content-Type", "Accept", "Authorization"}
+	router.Use(cors.New(corsConfig))
 
 	// 2. Setup Dependency Injection
 	pythonMLUrl := os.Getenv("PYTHON_ML_URL")

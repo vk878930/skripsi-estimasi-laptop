@@ -12,6 +12,7 @@ export default function EstimasiForm() {
   const [hargaBawah, setHargaBawah] = useState(null)
   const [hargaAtas, setHargaAtas] = useState(null)
   const [nearestNeighbors, setNearestNeighbors] = useState(null)
+  const [scalerStats, setScalerStats] = useState(null)
   const [loading, setLoading] = useState(false)
   
   // State untuk menyimpan data riwayat
@@ -56,6 +57,7 @@ export default function EstimasiForm() {
       setHargaBawah(response.data.data.harga_bawah)
       setHargaAtas(response.data.data.harga_atas)
       setNearestNeighbors(response.data.data.nearest_neighbors)
+      setScalerStats(response.data.data.scaler_stats)
       
       // Setelah AI berhasil menebak, refresh otomatis tabel riwayat di bawah!
       fetchRiwayat() 
@@ -164,17 +166,85 @@ export default function EstimasiForm() {
           )}
           
           {nearestNeighbors && nearestNeighbors.length > 0 && (
-            <div style={{ textAlign: 'left', backgroundColor: '#f8fafc', padding: '15px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-              <h4 style={{ margin: '0 0 10px', color: '#334155' }}>🔍 Referensi Data AI (Nearest Neighbors):</h4>
-              <ul style={{ margin: 0, paddingLeft: '20px', color: '#475569', fontSize: '0.9rem' }}>
+            <div style={{ textAlign: 'left', backgroundColor: '#f8fafc', padding: '15px', borderRadius: '8px', border: '1px solid #e2e8f0', marginTop: '20px' }}>
+              <h4 style={{ margin: '0 0 10px', color: '#334155' }}>🧠 Bagaimana AI Bekerja? (Behind the Scenes)</h4>
+              <p style={{ color: '#475569', fontSize: '0.85rem', marginBottom: '15px' }}>
+                Berikut adalah proses kalkulasi K-Nearest Neighbors (KNN) langkah demi langkah untuk menemukan taksiran harga.
+              </p>
+
+              {/* STEP 1: PREPROCESSING */}
+              {scalerStats && (
+                <div style={{ marginTop: '15px', padding: '10px', backgroundColor: '#e0f2fe', borderRadius: '6px', fontSize: '0.85rem', color: '#0369a1', marginBottom: '15px' }}>
+                  <h5 style={{ margin: '0 0 5px', fontSize: '0.95rem' }}>Langkah 1: Standarisasi Data (Z-Score)</h5>
+                  <p style={{ margin: '0 0 10px' }}>Algoritma menggunakan <strong>StandardScaler</strong>: <code>z = (x - μ) / σ</code> agar satuan (GB, Tahun) tidak mengacaukan perhitungan jarak Euclidean.</p>
+                  <ul style={{ margin: 0, paddingLeft: '20px', fontFamily: 'monospace' }}>
+                    <li><strong>RAM</strong>: ({formData.ram} - {scalerStats.ram?.mean}) / {scalerStats.ram?.scale} = {((formData.ram - scalerStats.ram?.mean) / scalerStats.ram?.scale).toFixed(4)}</li>
+                    <li><strong>SSD</strong>: ({formData.ssd} - {scalerStats.ssd?.mean}) / {scalerStats.ssd?.scale} = {((formData.ssd - scalerStats.ssd?.mean) / scalerStats.ssd?.scale).toFixed(4)}</li>
+                    <li><strong>Tahun</strong>: ({formData.tahun} - {scalerStats.tahun?.mean}) / {scalerStats.tahun?.scale} = {((formData.tahun - scalerStats.tahun?.mean) / scalerStats.tahun?.scale).toFixed(4)}</li>
+                  </ul>
+                </div>
+              )}
+              
+              <h5 style={{ margin: '0 0 10px', color: '#334155', fontSize: '0.95rem' }}>Langkah 2: Pencarian Jarak Euclidean (Terdekat)</h5>
+              <ul style={{ margin: 0, paddingLeft: '0', listStyleType: 'none', color: '#475569', fontSize: '0.85rem' }}>
                 {nearestNeighbors.map((nb, idx) => (
-                  <li key={idx} style={{ marginBottom: '8px' }}>
-                    <strong>{nb.merek} {nb.processor}</strong> (RAM {nb.ram}GB, SSD {nb.ssd}GB, Thn {nb.tahun})
+                  <li key={idx} style={{ marginBottom: '15px', padding: '10px', backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '6px' }}>
+                    <strong>{idx+1}. {nb.merek} {nb.processor}</strong> (RAM {nb.ram}GB, SSD {nb.ssd}GB, Thn {nb.tahun})
                     <br />
-                    Terjual di harga: <strong style={{ color: '#0f172a' }}>Rp {nb.harga.toLocaleString('id-ID')}</strong>
+                    Terjual: <strong style={{ color: '#0f172a' }}>Rp {nb.harga.toLocaleString('id-ID')}</strong> | Distance: <span style={{ color: '#ef4444', fontWeight: 'bold' }}>{nb.jarak !== undefined ? nb.jarak.toFixed(4) : '-'}</span>
+                    
+                    <details style={{ marginTop: '10px', border: '1px solid #cbd5e1', borderRadius: '4px' }}>
+                      <summary style={{ cursor: 'pointer', padding: '8px', backgroundColor: '#f1f5f9', fontWeight: 'bold', color: '#475569' }}>
+                        Lihat Rincian Perhitungan Distance
+                      </summary>
+                      <div style={{ padding: '10px', fontSize: '0.8rem', borderTop: '1px solid #e2e8f0', overflowX: 'auto' }}>
+                        <p style={{ margin: '0 0 10px' }}><strong>Rumus Euclidean:</strong> <code>d = √ (Σ (Input_z - Neighbor_z)²)</code></p>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                          <thead>
+                            <tr style={{ borderBottom: '1px solid #cbd5e1', backgroundColor: '#f8fafc' }}>
+                              <th style={{ padding: '6px' }}>Fitur (One-Hot & Scaled)</th>
+                              <th style={{ padding: '6px' }}>Input (z)</th>
+                              <th style={{ padding: '6px' }}>Neighbor (z)</th>
+                              <th style={{ padding: '6px' }}>(Input - Neighbor)²</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {nb.perhitungan_jarak?.map((calc, cIdx) => (
+                              <tr key={cIdx} style={{ borderBottom: '1px dashed #e2e8f0' }}>
+                                <td style={{ padding: '6px' }}>{calc.fitur}</td>
+                                <td style={{ padding: '6px', fontFamily: 'monospace' }}>{calc.input}</td>
+                                <td style={{ padding: '6px', fontFamily: 'monospace' }}>{calc.neighbor}</td>
+                                <td style={{ padding: '6px', fontFamily: 'monospace' }}>{calc.squared_diff}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                          <tfoot>
+                            <tr style={{ backgroundColor: '#f8fafc' }}>
+                              <td colSpan="3" style={{ textAlign: 'right', padding: '6px', fontWeight: 'bold' }}>Total Selisih Kuadrat (Σ):</td>
+                              <td style={{ padding: '6px', fontFamily: 'monospace', fontWeight: 'bold' }}>{nb.perhitungan_jarak?.reduce((acc, curr) => acc + curr.squared_diff, 0).toFixed(4)}</td>
+                            </tr>
+                            <tr style={{ backgroundColor: '#fee2e2' }}>
+                              <td colSpan="3" style={{ textAlign: 'right', padding: '6px', fontWeight: 'bold', color: '#b91c1c' }}>Akar Kuadrat (Euclidean Distance):</td>
+                              <td style={{ padding: '6px', fontFamily: 'monospace', fontWeight: 'bold', color: '#b91c1c' }}>√ {nb.perhitungan_jarak?.reduce((acc, curr) => acc + curr.squared_diff, 0).toFixed(4)} = {nb.jarak?.toFixed(4)}</td>
+                            </tr>
+                          </tfoot>
+                        </table>
+                      </div>
+                    </details>
                   </li>
                 ))}
               </ul>
+
+              <h5 style={{ margin: '15px 0 10px', color: '#334155', fontSize: '0.95rem' }}>Langkah 3: Kalkulasi Rata-rata Harga</h5>
+              <div style={{ padding: '10px', backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '6px', fontSize: '0.9rem', color: '#166534' }}>
+                (
+                {nearestNeighbors.map((nb, idx) => (
+                  <span key={idx}>Rp {nb.harga.toLocaleString('id-ID')}{idx < nearestNeighbors.length - 1 ? ' + ' : ''}</span>
+                ))}
+                ) / {nearestNeighbors.length} tetangga
+                <br />
+                = <strong style={{ fontSize: '1.1rem' }}>Rp {Math.round(nearestNeighbors.reduce((sum, nb) => sum + nb.harga, 0) / nearestNeighbors.length).toLocaleString('id-ID')}</strong>
+              </div>
             </div>
           )}
         </div>
