@@ -1,5 +1,6 @@
 import React from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom'
+import { Toaster } from 'react-hot-toast'
 import EstimasiForm from './components/EstimasiForm'
 import PenjualanDashboard from './components/PenjualanDashboard'
 import BossDashboard from './components/BossDashboard'
@@ -100,6 +101,15 @@ const MainLayout = ({ children }) => {
 function App() {
   return (
     <Router>
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          duration: 3500,
+          style: { borderRadius: '8px', fontFamily: 'Inter, sans-serif', fontSize: '0.9rem' },
+          success: { style: { background: '#dcfce7', color: '#166534', border: '1px solid #86efac' } },
+          error: { style: { background: '#fee2e2', color: '#991b1b', border: '1px solid #fca5a5' } },
+        }}
+      />
       <Routes>
         <Route path="/login" element={<Login />} />
         

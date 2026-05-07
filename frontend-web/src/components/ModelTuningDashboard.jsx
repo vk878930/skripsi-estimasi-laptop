@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import axios from 'axios'
+import api from '../api'
 
 export default function ModelTuningDashboard() {
   const [kValue, setKValue] = useState(5)
@@ -12,7 +12,7 @@ export default function ModelTuningDashboard() {
     setLoading(true)
     setMessage(null)
     try {
-      const response = await axios.post('http://localhost:8080/api/estimasi/evaluate', { k: parseInt(kValue) })
+      const response = await api.post('/api/estimasi/evaluate', { k: parseInt(kValue) })
       const resultData = response.data.data;
       if (resultData && resultData.status === 'error') {
         setMessage({ type: 'error', text: resultData.message || "Gagal melakukan evaluasi model." })
@@ -34,7 +34,7 @@ export default function ModelTuningDashboard() {
     setLoading(true)
     setMessage(null)
     try {
-      const response = await axios.post('http://localhost:8080/api/estimasi/update_k', { k: parseInt(evaluationResult.k) })
+      const response = await api.post('/api/estimasi/update_k', { k: parseInt(evaluationResult.k) })
       const resultData = response.data.data;
       if (resultData && resultData.status === 'error') {
         setMessage({ type: 'error', text: resultData.message || "Gagal mengatur model default." })

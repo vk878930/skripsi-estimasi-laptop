@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import axios from 'axios';
+import toast from 'react-hot-toast';
+import api from '../api';
 
 export default function EditTransaksiModal({ isOpen, onClose, onRefresh, initialData }) {
   const [header, setHeader] = useState({
@@ -23,14 +24,14 @@ export default function EditTransaksiModal({ isOpen, onClose, onRefresh, initial
   const handleItemChange = (index, e) => {
     const newItems = [...items];
     const { name, value } = e.target;
-    newItems[index][name] = (name === 'ram' || name === 'ssd' || name === 'tahun' || name === 'kondisi' || name === 'qty' || name === 'harga_terjual') 
+    newItems[index][name] = (name === 'ram' || name === 'ssd' || name === 'tahun' || name === 'kondisi' || name === 'qty' || name === 'harga_terjual')
       ? parseInt(value) || 0 : value;
     setItems(newItems);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     const processedItems = items.map(item => ({
       ...item,
       sub_total: item.qty * item.harga_terjual
@@ -40,20 +41,20 @@ export default function EditTransaksiModal({ isOpen, onClose, onRefresh, initial
 
     const payload = {
       ...header,
-      tanggal_jual: new Date(header.tanggal_jual).toISOString(), 
+      tanggal_jual: new Date(header.tanggal_jual).toISOString(),
       harga_total: totalHarga,
       items: processedItems
     };
 
+    const toastId = toast.loading('Menyimpan perubahan...');
     try {
-      // Menggunakan method PUT dan mengirim ID transaksi di URL
-      await axios.put(`http://localhost:8080/api/penjualan/${initialData.id}`, payload);
-      alert("Transaksi Berhasil Diperbarui!");
-      onRefresh(); 
-      onClose(); 
+      await api.put(`/api/penjualan/${initialData.id}`, payload);
+      toast.success('Transaksi berhasil diperbarui!', { id: toastId });
+      onRefresh();
+      onClose();
     } catch (error) {
       console.error(error);
-      alert("Gagal update transaksi: " + (error.response?.data?.detail || error.message));
+      toast.error('Gagal update: ' + (error.response?.data?.detail || error.message), { id: toastId });
     }
   };
 
@@ -62,7 +63,7 @@ export default function EditTransaksiModal({ isOpen, onClose, onRefresh, initial
       <div className="modal-content">
         <h3 style={{ margin: '0 0 20px 0', color: '#0f172a' }}>✏️ Edit Transaksi</h3>
         <form onSubmit={handleSubmit}>
-          
+
           <div className="form-row">
             <div className="input-group">
               <label>Nomor Nota (Order ID):</label>
@@ -79,9 +80,9 @@ export default function EditTransaksiModal({ isOpen, onClose, onRefresh, initial
           </div>
 
           <hr style={{ border: 'none', borderTop: '1px solid #e2e8f0', margin: '15px 0' }} />
-          
+
           <h4 style={{ margin: '0 0 15px 0', color: '#475569' }}>Daftar Laptop Terjual:</h4>
-          
+
           {items.map((item, index) => (
             <div key={index} className="item-input-group">
               <div className="form-row" style={{ marginBottom: '10px' }}>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import axios from 'axios';
-import { Printer, FileText, Filter } from 'lucide-react';
+import api from '../api';
+import * as XLSX from 'xlsx';
+import { Printer, FileText, Filter, Download } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
 
 export default function LaporanDashboard() {
@@ -25,8 +26,8 @@ export default function LaporanDashboard() {
     setLoading(true);
     try {
       const [resPenjualan, resEstimasi] = await Promise.all([
-        axios.get('http://localhost:8080/api/penjualan'),
-        axios.get('http://localhost:8080/api/estimasi/riwayat')
+        api.get('/api/penjualan'),
+        api.get('/api/estimasi/riwayat')
       ]);
       setPenjualanData(resPenjualan.data.data || []);
       setEstimasiData(resEstimasi.data.data || []);
@@ -46,7 +47,7 @@ export default function LaporanDashboard() {
       const params = {};
       if (selectedMonth) params.bulan = selectedMonth;
       if (selectedYear) params.tahun = selectedYear;
-      const res = await axios.get('http://localhost:8080/api/penjualan/terpopuler', { params });
+      const res = await api.get('/api/penjualan/terpopuler', { params });
       setTerpopulerData(res.data.data || []);
     } catch (error) {
       console.error("Error fetching terpopuler data:", error);
@@ -59,8 +60,50 @@ export default function LaporanDashboard() {
     }
   }, [activeTab, fetchTerpopuler]);
 
-  const handlePrint = () => {
-    window.print();
+  const handlePrint = () => { window.print(); };
+
+  // #14 — Excel export
+  const handleExcelExport = () => {
+    let rows = [];
+    let sheetName = 'Laporan';
+
+    if (activeTab === 'penjualan') {
+      sheetName = 'Laporan Penjualan';
+      rows = filteredPenjualan.map((item, i) => ({
+        No: i + 1,
+        'Order ID': item.order_id,
+        Tanggal: new Date(item.tanggal_jual).toLocaleDateString('id-ID'),
+        'Nama Pembeli': item.nama_pembeli,
+        'Total Item': item.items?.reduce((s, it) => s + it.qty, 0) || 0,
+        'Total Harga (Rp)': item.harga_total,
+      }));
+    } else if (activeTab === 'terpopuler') {
+      sheetName = 'Laptop Terpopuler';
+      rows = terpopulerData.map((item, i) => ({
+        No: i + 1,
+        Merek: item.merek,
+        'Seri / Model': item.nama_unit,
+        'Total Unit Terjual': item.total_terjual,
+      }));
+    } else {
+      sheetName = 'Riwayat Estimasi';
+      rows = estimasiData.map((item, i) => ({
+        No: i + 1,
+        Tanggal: new Date(item.created_at).toLocaleDateString('id-ID'),
+        Merek: item.merek,
+        Processor: item.processor,
+        'RAM (GB)': item.ram,
+        'SSD (GB)': item.ssd,
+        Tahun: item.tahun,
+        Kondisi: getKondisiText(item.kondisi),
+        'Harga Estimasi (Rp)': item.harga || 0,
+      }));
+    }
+
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, sheetName);
+    XLSX.writeFile(wb, `${sheetName.replace(/\s/g, '_')}.xlsx`);
   };
 
   // Filter Penjualan Data based on Month/Year
@@ -97,23 +140,42 @@ export default function LaporanDashboard() {
           <h2 style={{ margin: 0, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '10px' }}>
             <FileText size={28} color="#2563eb" /> Modul Laporan
           </h2>
-          <button 
-            onClick={handlePrint}
-            style={{
-              padding: '10px 20px',
-              backgroundColor: '#2563eb',
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              fontWeight: 'bold'
-            }}
-          >
-            <Printer size={20} /> Cetak Laporan
-          </button>
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+            <button
+              onClick={handleExcelExport}
+              style={{
+                padding: '10px 20px',
+                backgroundColor: '#10b981',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                fontWeight: 'bold'
+              }}
+            >
+              <Download size={20} /> Export Excel
+            </button>
+            <button
+              onClick={handlePrint}
+              style={{
+                padding: '10px 20px',
+                backgroundColor: '#2563eb',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                fontWeight: 'bold'
+              }}
+            >
+              <Printer size={20} /> Cetak Laporan
+            </button>
+          </div>
         </div>
 
         {/* Tabs */}
