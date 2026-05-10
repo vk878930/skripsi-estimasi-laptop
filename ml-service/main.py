@@ -1,9 +1,10 @@
 from fastapi import FastAPI, Header, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 import pandas as pd
 import numpy as np
 import re
 import threading
+import logging
 from contextlib import asynccontextmanager
 from sklearn.neighbors import KNeighborsRegressor
 from sklearn.preprocessing import StandardScaler
@@ -14,11 +15,26 @@ import os
 import uvicorn
 
 # ==========================================
+# LOGGING
+# ==========================================
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# ==========================================
 # CONFIGURATION
 # ==========================================
 DB_URI = os.getenv("DB_URI", "postgresql://postgres:postgres@localhost:5432/skripsi_laptop")
 # #10 — Protect /retrain with a secret key
 RETRAIN_SECRET = os.getenv("RETRAIN_SECRET", "rahasia-retrain-key")
+
+# Numeric features that should be standardized (Z-score scaling).
+# One-hot encoded columns (merek_*, proc_family_*) are NOT scaled
+# because they are already 0/1 — scaling them distorts KNN distances.
+NUMERIC_FEATURES = ["ram", "ssd", "tahun", "kondisi", "proc_gen"]
+
+# Minimum standard deviation for price range calculation (in IDR).
+# Ensures the displayed range is never unrealistically narrow.
+MIN_PRICE_STD_DEV = 100_000
 
 # OPTIMIZATION: Connection Pooling
 engine = create_engine(DB_URI, pool_size=10, max_overflow=20)
@@ -30,6 +46,7 @@ _model_lock = threading.Lock()
 knn_model = None
 scaler = None
 model_columns = []
+numeric_col_indices = []  # indices of numeric columns within model_columns
 df_original = None
 current_k = None
 X_scaled_global = None
@@ -78,11 +95,59 @@ def parse_processor(proc_str):
     return family, gen
 
 
+def _prepare_features(df):
+    """Shared feature engineering pipeline used by both training and evaluation.
+
+    Takes a DataFrame with columns [merek, processor, ram, ssd, tahun, kondisi, harga]
+    and returns (X DataFrame, y Series, column list).
+    """
+    df_copy = df.copy()
+    parsed_procs = df_copy['processor'].apply(parse_processor).tolist()
+    df_copy[['proc_family', 'proc_gen']] = pd.DataFrame(parsed_procs, index=df_copy.index)
+    df_copy = df_copy.drop(columns=['processor'])
+
+    df_encoded = pd.get_dummies(df_copy, columns=["merek", "proc_family"], drop_first=False)
+
+    y = df_encoded["harga"]
+    X = df_encoded.drop("harga", axis=1)
+    return X, y, list(X.columns)
+
+
+def _partial_scale(X_df, cols, fit=True, existing_scaler=None):
+    """Scale ONLY numeric features, leaving one-hot columns (0/1) untouched.
+
+    This is critical for KNN because StandardScaler on one-hot columns
+    distorts their 0/1 values into arbitrary floats, making them dominate
+    or be dwarfed in Euclidean distance calculations.
+
+    Args:
+        X_df: Feature DataFrame
+        cols: All column names
+        fit: If True, fit a new scaler. If False, use existing_scaler.
+        existing_scaler: Pre-fitted scaler (required when fit=False).
+
+    Returns:
+        (X_scaled numpy array, fitted StandardScaler, list of numeric column indices)
+    """
+    X_array = X_df.values.copy().astype(float)
+    num_indices = [i for i, c in enumerate(cols) if c in NUMERIC_FEATURES]
+
+    if fit:
+        sc = StandardScaler()
+        X_array[:, num_indices] = sc.fit_transform(X_array[:, num_indices])
+    else:
+        sc = existing_scaler
+        X_array[:, num_indices] = sc.transform(X_array[:, num_indices])
+
+    return X_array, sc, num_indices
+
+
 def train_model():
     """Train/retrain the KNN model. Thread-safe via _model_lock."""
-    global knn_model, scaler, model_columns, df_original, current_k, X_scaled_global
+    global knn_model, scaler, model_columns, numeric_col_indices
+    global df_original, current_k, X_scaled_global
 
-    print("Membaca data dari database untuk training KNN...")
+    logger.info("Membaca data dari database untuk training KNN...")
     try:
         df = pd.read_sql(
             "SELECT merek, processor, ram, ssd, tahun, kondisi, harga_terjual as harga FROM item_penjualans",
@@ -90,7 +155,7 @@ def train_model():
         )
 
         if len(df) < 2:
-            print("Data kurang untuk training, menggunakan data fallback sementara.")
+            logger.warning("Data kurang untuk training, menggunakan data fallback sementara.")
             df = pd.DataFrame({
                 "merek": ["Lenovo", "Asus", "Acer", "Lenovo", "Dell"],
                 "processor": ["i5-8250U", "i7-10750H", "i3-1005G1", "Ryzen 5 3500U", "i5-1135G7"],
@@ -101,26 +166,27 @@ def train_model():
                 "harga": [4500000, 12000000, 3000000, 3800000, 4200000]
             })
 
-        df_copy = df.copy()
+        # DEDUPLICATION: Group identical specs and average their prices.
+        # This prevents duplicate records from flooding KNN neighbor selection.
+        feature_cols = ["merek", "processor", "ram", "ssd", "tahun", "kondisi"]
+        rows_before = len(df)
+        df = df.groupby(feature_cols, as_index=False).agg(
+            harga=("harga", "mean")
+        )
+        # Round harga to nearest integer after averaging
+        df["harga"] = df["harga"].round().astype(int)
+        rows_after = len(df)
+        logger.info(f"Deduplikasi: {rows_before} baris → {rows_after} baris unik (dihapus {rows_before - rows_after} duplikat)")
 
-        parsed_procs = df_copy['processor'].apply(parse_processor).tolist()
-        df_copy[['proc_family', 'proc_gen']] = pd.DataFrame(parsed_procs, index=df_copy.index)
-        df_copy = df_copy.drop(columns=['processor'])
+        X, y, cols = _prepare_features(df)
 
-        df_encoded = pd.get_dummies(df_copy, columns=["merek", "proc_family"], drop_first=False)
-
-        y = df_encoded["harga"]
-        X = df_encoded.drop("harga", axis=1)
-
-        cols = list(X.columns)
-
-        new_scaler = StandardScaler()
-        X_scaled = new_scaler.fit_transform(X)
+        # Scale ONLY numeric features, leave one-hot columns as 0/1
+        X_scaled, new_scaler, num_indices = _partial_scale(X, cols, fit=True)
 
         with _model_lock:
-            k = current_k if (current_k is not None and current_k > 0) else (2 if len(df_copy) < 5 else 5)
-            if k > len(df_copy):
-                k = len(df_copy)
+            k = current_k if (current_k is not None and current_k > 0) else (2 if len(df) < 5 else 5)
+            if k >= len(df):
+                k = max(1, len(df) - 1)
 
             new_model = KNeighborsRegressor(n_neighbors=k)
             new_model.fit(X_scaled, y)
@@ -129,13 +195,14 @@ def train_model():
             knn_model = new_model
             scaler = new_scaler
             model_columns = cols
+            numeric_col_indices = num_indices
             df_original = df.copy()  # keep original with processor column
             X_scaled_global = X_scaled
 
-        print("Model berhasil di-training!")
+        logger.info(f"Model berhasil di-training! (K={k}, data={len(df)} baris, fitur={len(cols)}, numerik={len(num_indices)})")
 
     except Exception as e:
-        print(f"Gagal koneksi atau training: {e}")
+        logger.error(f"Gagal koneksi atau training: {e}", exc_info=True)
         with _model_lock:
             knn_model = None
 
@@ -158,16 +225,16 @@ app = FastAPI(title="Laptop Price Estimator API", lifespan=lifespan)
 # SCHEMA
 # ==========================================
 class SpesifikasiLaptop(BaseModel):
-    merek: str
-    processor: str
-    ram: int
-    ssd: int
-    tahun: int
-    kondisi: int
+    merek: str = Field(min_length=1, max_length=100, description="Brand name")
+    processor: str = Field(min_length=1, max_length=100, description="Processor model")
+    ram: int = Field(gt=0, description="RAM in GB")
+    ssd: int = Field(gt=0, description="SSD in GB")
+    tahun: int = Field(ge=2005, le=2030, description="Release year")
+    kondisi: int = Field(ge=1, le=5, description="Condition rating 1-5")
 
 
 class EvaluateRequest(BaseModel):
-    k: int
+    k: int = Field(ge=1, description="Number of neighbors")
 
 
 # ==========================================
@@ -185,12 +252,13 @@ def prediksi_harga(spek: SpesifikasiLaptop):
     with _model_lock:
         model = knn_model
         sc = scaler
-        cols = model_columns
+        cols = list(model_columns)  # copy the list to avoid mutation
+        num_indices = list(numeric_col_indices)
         df_orig = df_original
         X_scaled = X_scaled_global
 
     if model is None or sc is None:
-        return {"status": "error", "message": "Model belum siap atau data kosong"}
+        raise HTTPException(status_code=503, detail="Model belum siap atau data kosong. Coba lagi dalam beberapa detik.")
 
     input_df = pd.DataFrame([{
         "merek": spek.merek,
@@ -206,12 +274,22 @@ def prediksi_harga(spek: SpesifikasiLaptop):
     input_df = input_df.drop(columns=['processor'])
 
     input_encoded = pd.get_dummies(input_df, columns=["merek", "proc_family"], drop_first=False)
+
+    # Handle columns that exist in input but NOT in training data (unseen brand/family).
+    # These extra one-hot columns would cause a shape mismatch, so we drop them.
+    extra_cols = [c for c in input_encoded.columns if c not in cols]
+    if extra_cols:
+        logger.warning(f"Input memiliki fitur yang tidak ada di training data (akan diabaikan): {extra_cols}")
+        input_encoded = input_encoded.drop(columns=extra_cols)
+
     for col in cols:
         if col not in input_encoded.columns:
             input_encoded[col] = 0
     input_encoded = input_encoded[cols]
 
-    input_scaled = sc.transform(input_encoded)
+    # Scale ONLY numeric features (same as training)
+    input_scaled, _, _ = _partial_scale(input_encoded, cols, fit=False, existing_scaler=sc)
+
     prediksi = model.predict(input_scaled)
 
     distances, indices = model.kneighbors(input_scaled)
@@ -254,19 +332,20 @@ def prediksi_harga(spek: SpesifikasiLaptop):
     if len(neighbors_list) > 0:
         prices = [nb["harga"] for nb in neighbors_list]
         std_dev = np.std(prices)
-        if std_dev < 100000:
-            std_dev = 100000
+        if std_dev < MIN_PRICE_STD_DEV:
+            std_dev = MIN_PRICE_STD_DEV
         harga_bawah = max(0, int(prediksi[0] - std_dev))
         harga_atas = int(prediksi[0] + std_dev)
 
+    # Build scaler stats for XAI display (only numeric features are scaled)
     scaler_stats = {}
-    if sc is not None and len(sc.mean_) == len(cols):
-        for j, col in enumerate(cols):
-            if col in ["ram", "ssd", "tahun", "kondisi"]:
-                scaler_stats[col] = {
-                    "mean": round(float(sc.mean_[j]), 4),
-                    "scale": round(float(sc.scale_[j]), 4)
-                }
+    if sc is not None:
+        for local_idx, global_idx in enumerate(num_indices):
+            col_name = cols[global_idx]
+            scaler_stats[col_name] = {
+                "mean": round(float(sc.mean_[local_idx]), 4),
+                "scale": round(float(sc.scale_[local_idx]), 4)
+            }
 
     return {
         "status": "success",
@@ -285,23 +364,16 @@ def evaluate_model(req: EvaluateRequest):
         df_orig = df_original
 
     if df_orig is None or len(df_orig) < 5:
-        return {"status": "error", "message": "Data tidak cukup untuk evaluasi. Butuh minimal 5 data."}
+        raise HTTPException(status_code=400, detail="Data tidak cukup untuk evaluasi. Butuh minimal 5 data.")
 
     try:
-        df = df_orig.copy()
-        parsed_eval = df['processor'].apply(parse_processor).tolist()
-        df[['proc_family', 'proc_gen']] = pd.DataFrame(parsed_eval, index=df.index)
-        df = df.drop(columns=['processor'])
-        df_encoded = pd.get_dummies(df, columns=["merek", "proc_family"], drop_first=False)
-
-        y = df_encoded["harga"]
-        X = df_encoded.drop("harga", axis=1)
+        X, y, eval_cols = _prepare_features(df_orig)
 
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-        eval_scaler = StandardScaler()
-        X_train_scaled = eval_scaler.fit_transform(X_train)
-        X_test_scaled = eval_scaler.transform(X_test)
+        # Scale only numeric features for evaluation too
+        X_train_scaled, eval_scaler, _ = _partial_scale(X_train, eval_cols, fit=True)
+        X_test_scaled, _, _ = _partial_scale(X_test, eval_cols, fit=False, existing_scaler=eval_scaler)
 
         eval_k = max(1, min(req.k, len(X_train)))
         temp_model = KNeighborsRegressor(n_neighbors=eval_k)
@@ -319,27 +391,21 @@ def evaluate_model(req: EvaluateRequest):
             "test_size": len(y_test)
         }
     except Exception as e:
-        return {"status": "error", "message": str(e)}
+        logger.error(f"Evaluasi gagal: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.post("/update_k")
-def update_k(req: EvaluateRequest):
+def update_k(req: EvaluateRequest, x_retrain_secret: str = Header(default=None)):
     global current_k
-    if req.k < 1:
-        return {"status": "error", "message": "Nilai K minimal harus 1."}
+    if x_retrain_secret != RETRAIN_SECRET:
+        raise HTTPException(status_code=403, detail="Akses ditolak: secret key salah atau tidak ada.")
 
     with _model_lock:
         current_k = req.k
 
-    train_model()
-
-    with _model_lock:
-        ready = knn_model is not None
-
-    if not ready:
-        return {"status": "error", "message": "Gagal melatih ulang model dengan K tersebut."}
-
-    return {"status": "success", "message": f"Global K berhasil diubah menjadi {req.k} dan model dilatih ulang."}
+    threading.Thread(target=train_model, daemon=True).start()
+    return {"status": "success", "message": f"Global K diubah menjadi {req.k}. Model sedang dilatih ulang di background."}
 
 
 # #10 — Protect /retrain with secret key

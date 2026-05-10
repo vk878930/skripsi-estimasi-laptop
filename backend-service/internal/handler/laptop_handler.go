@@ -71,7 +71,7 @@ func (h *LaptopHandler) EstimasiHarga(c *gin.Context) {
 // @Router /estimasi/riwayat [get]
 func (h *LaptopHandler) AmbilRiwayatPrediksi(c *gin.Context) {
 	// Panggil fungsi dari usecase (Sesuaikan nama fungsinya dengan yang ada di usecase kamu)
-	data, err := h.laptopUsecase.DapatkanRiwayat() 
+	data, err := h.laptopUsecase.DapatkanRiwayat()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal mengambil riwayat prediksi"})
 		return

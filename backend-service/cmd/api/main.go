@@ -69,7 +69,7 @@ func main() {
 	if count == 0 {
 		hashedAdmin, _ := bcrypt.GenerateFromPassword([]byte("admin123"), bcrypt.DefaultCost)
 		hashedBoss, _ := bcrypt.GenerateFromPassword([]byte("boss123"), bcrypt.DefaultCost)
-		
+
 		userRepo.Create(&entity.User{Username: "admin", Password: string(hashedAdmin), Role: "admin"})
 		userRepo.Create(&entity.User{Username: "boss", Password: string(hashedBoss), Role: "boss"})
 		log.Println("Default users created: admin/admin123 & boss/boss123")

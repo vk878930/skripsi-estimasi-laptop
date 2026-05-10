@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import api from '../api'
+import KNNVisualization from './KNNVisualization'
 
 // #8 — Input validation
 const validateForm = (formData, procFamily, procGen) => {
@@ -216,11 +217,12 @@ export default function EstimasiForm() {
               {scalerStats && (
                 <div style={{ marginTop: '15px', padding: '10px', backgroundColor: '#e0f2fe', borderRadius: '6px', fontSize: '0.85rem', color: '#0369a1', marginBottom: '15px' }}>
                   <h5 style={{ margin: '0 0 5px', fontSize: '0.95rem' }}>Langkah 1: Standarisasi Data (Z-Score)</h5>
-                  <p style={{ margin: '0 0 10px' }}>Algoritma menggunakan <strong>StandardScaler</strong>: <code>z = (x - μ) / σ</code> agar satuan (GB, Tahun) tidak mengacaukan perhitungan jarak Euclidean.</p>
+                  <p style={{ margin: '0 0 10px' }}>Algoritma menggunakan <strong>StandardScaler</strong>: <code>z = (x - μ) / σ</code> <strong>hanya pada fitur numerik</strong> agar satuan (GB, Tahun) tidak mengacaukan perhitungan jarak Euclidean. Fitur kategorikal (merek, prosesor) menggunakan <em>one-hot encoding</em> (0/1) dan <strong>tidak di-scale</strong>.</p>
                   <ul style={{ margin: 0, paddingLeft: '20px', fontFamily: 'monospace' }}>
                     <li><strong>RAM</strong>: ({formData.ram} - {scalerStats.ram?.mean}) / {scalerStats.ram?.scale} = {((formData.ram - scalerStats.ram?.mean) / scalerStats.ram?.scale).toFixed(4)}</li>
                     <li><strong>SSD</strong>: ({formData.ssd} - {scalerStats.ssd?.mean}) / {scalerStats.ssd?.scale} = {((formData.ssd - scalerStats.ssd?.mean) / scalerStats.ssd?.scale).toFixed(4)}</li>
                     <li><strong>Tahun</strong>: ({formData.tahun} - {scalerStats.tahun?.mean}) / {scalerStats.tahun?.scale} = {((formData.tahun - scalerStats.tahun?.mean) / scalerStats.tahun?.scale).toFixed(4)}</li>
+                    <li><strong>Kondisi</strong>: ({formData.kondisi} - {scalerStats.kondisi?.mean}) / {scalerStats.kondisi?.scale} = {((formData.kondisi - scalerStats.kondisi?.mean) / scalerStats.kondisi?.scale).toFixed(4)}</li>
                   </ul>
                 </div>
               )}
@@ -288,6 +290,17 @@ export default function EstimasiForm() {
             </div>
           )}
         </div>
+      )}
+
+      {/* KNN Visualization */}
+      {nearestNeighbors && nearestNeighbors.length > 0 && (
+        <KNNVisualization
+          neighbors={nearestNeighbors}
+          queryData={formData}
+          hasilEstimasi={hasilEstimasi}
+          hargaBawah={hargaBawah}
+          hargaAtas={hargaAtas}
+        />
       )}
 
       {/* Tabel Riwayat */}
