@@ -52,6 +52,17 @@ current_k = None
 X_scaled_global = None
 
 
+def clean_merek(merek_str):
+    if not merek_str:
+        return "Other"
+    m_str = str(merek_str).strip().title()
+    if "Macbook" in m_str or "Apple" in m_str:
+        return "Apple"
+    if m_str.upper() == "HP":
+        return "HP"
+    return m_str
+
+
 def parse_processor(proc_str):
     proc_str = str(proc_str).lower()
     family = "other"
@@ -166,6 +177,9 @@ def train_model():
                 "harga": [4500000, 12000000, 3000000, 3800000, 4200000]
             })
 
+        # Standarisasi / pembersihan nama merek agar konsisten (Macbook -> Apple, case-insensitive)
+        df["merek"] = df["merek"].apply(clean_merek)
+
         # DEDUPLICATION: Group identical specs and average their prices.
         # This prevents duplicate records from flooding KNN neighbor selection.
         feature_cols = ["merek", "processor", "ram", "ssd", "tahun", "kondisi"]
@@ -261,7 +275,7 @@ def prediksi_harga(spek: SpesifikasiLaptop):
         raise HTTPException(status_code=503, detail="Model belum siap atau data kosong. Coba lagi dalam beberapa detik.")
 
     input_df = pd.DataFrame([{
-        "merek": spek.merek,
+        "merek": clean_merek(spek.merek),
         "processor": spek.processor,
         "ram": spek.ram,
         "ssd": spek.ssd,

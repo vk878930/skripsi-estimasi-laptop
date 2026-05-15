@@ -5,7 +5,7 @@ import KNNVisualization from './KNNVisualization'
 // #8 — Input validation
 const validateForm = (formData, procFamily, procGen) => {
   const errors = {};
-  if (!formData.merek.trim()) errors.merek = 'Merek tidak boleh kosong.';
+  if (!formData.merek || !formData.merek.trim()) errors.merek = 'Merek tidak boleh kosong.';
   if (!procFamily.includes('Apple') && !procGen.trim()) errors.procGen = 'Model/Gen tidak boleh kosong.';
   if (formData.ram <= 0) errors.ram = 'RAM harus lebih dari 0 GB.';
   if (formData.ssd <= 0) errors.ssd = 'SSD harus lebih dari 0 GB.';
@@ -16,11 +16,23 @@ const validateForm = (formData, procFamily, procGen) => {
 
 export default function EstimasiForm() {
   const [formData, setFormData] = useState({
-    merek: 'Lenovo', processor: '', ram: 8, ssd: 256, tahun: 2021, kondisi: 4
+    merek: '', processor: '', ram: 0, ssd: 0, tahun: '', kondisi: 0
   })
-  const [procFamily, setProcFamily] = useState('Core i5')
-  const [procGen, setProcGen] = useState('8')
+  const [procFamily, setProcFamily] = useState('')
+  const [procGen, setProcGen] = useState('')
   const [validationErrors, setValidationErrors] = useState({}) // #8
+
+  // STATE BARU UNTUK KONTROL PRESET & CUSTOM
+  const [merekMode, setMerekMode] = useState('preset') // 'preset' | 'custom'
+  const [merekSelect, setMerekSelect] = useState('')
+
+  const [modelSeri, setModelSeri] = useState('') // Opsional
+
+  const [ramMode, setRamMode] = useState('preset') // 'preset' | 'custom'
+  const [ramSelect, setRamSelect] = useState('')
+
+  const [ssdMode, setSsdMode] = useState('preset') // 'preset' | 'custom'
+  const [ssdSelect, setSsdSelect] = useState('')
 
   const [hasilEstimasi, setHasilEstimasi] = useState(null)
   const [hargaBawah, setHargaBawah] = useState(null)
@@ -56,6 +68,45 @@ export default function EstimasiForm() {
     if (validationErrors[name]) {
       setValidationErrors(prev => { const e = {...prev}; delete e[name]; return e; });
     }
+  }
+
+  const handleMerekSelect = (e) => {
+    const val = e.target.value;
+    if (val === 'custom') {
+      setMerekMode('custom');
+      setFormData(prev => ({ ...prev, merek: '' }));
+    } else {
+      setMerekMode('preset');
+      setMerekSelect(val);
+      setFormData(prev => ({ ...prev, merek: val }));
+    }
+    if (validationErrors.merek) setValidationErrors(p => { const e={...p}; delete e.merek; return e; });
+  }
+
+  const handleRamSelect = (e) => {
+    const val = e.target.value;
+    if (val === 'custom') {
+      setRamMode('custom');
+    } else {
+      setRamMode('preset');
+      const num = parseInt(val);
+      setRamSelect(num);
+      setFormData(prev => ({ ...prev, ram: num }));
+    }
+    if (validationErrors.ram) setValidationErrors(p => { const e={...p}; delete e.ram; return e; });
+  }
+
+  const handleSsdSelect = (e) => {
+    const val = e.target.value;
+    if (val === 'custom') {
+      setSsdMode('custom');
+    } else {
+      setSsdMode('preset');
+      const num = parseInt(val);
+      setSsdSelect(num);
+      setFormData(prev => ({ ...prev, ssd: num }));
+    }
+    if (validationErrors.ssd) setValidationErrors(p => { const e={...p}; delete e.ssd; return e; });
   }
 
   const handleSubmit = async (e) => {
@@ -110,8 +161,8 @@ export default function EstimasiForm() {
   return (
     <div>
       <div style={{ textAlign: 'center', marginBottom: '30px' }}>
-        <h2 style={{ color: '#0f172a' }}>🤖 Estimasi Harga AI (KNN)</h2>
-        <p style={{ color: '#64748b' }}>Masukkan spesifikasi unit untuk melihat taksiran harga jual yang ideal</p>
+        <h2>🤖 Estimasi Harga AI (KNN)</h2>
+        <p className="text-secondary">Masukkan spesifikasi unit untuk melihat taksiran harga jual yang ideal</p>
       </div>
 
       {/* Error banner */}
@@ -122,24 +173,58 @@ export default function EstimasiForm() {
       )}
 
       {/* Form */}
-      <form onSubmit={handleSubmit} className="form-card">
+      <form onSubmit={handleSubmit} className="form-card" style={{ maxWidth: '600px' }}>
         <div className="form-row">
-          <div className="input-group">
+          <div className="input-group" style={{ flex: 1 }}>
             <label>Merek:</label>
-            <input type="text" name="merek" value={formData.merek} onChange={handleChange} placeholder="Ex: Lenovo" required style={{ border: errorBorder('merek') }} />
+            <select value={merekMode === 'custom' ? 'custom' : merekSelect} onChange={handleMerekSelect} style={{ border: errorBorder('merek') }}>
+              <option value="" disabled>Pilih Merek</option>
+              <option value="Lenovo">Lenovo</option>
+              <option value="Apple">Apple (Macbook)</option>
+              <option value="Asus">Asus</option>
+              <option value="Acer">Acer</option>
+              <option value="HP">HP</option>
+              <option value="Dell">Dell</option>
+              <option value="MSI">MSI</option>
+              <option value="custom">Lainnya (Custom)</option>
+            </select>
+            {merekMode === 'custom' && (
+              <input 
+                type="text" 
+                name="merek" 
+                value={formData.merek} 
+                onChange={handleChange} 
+                placeholder="Ketik merek (Ex: Chuwi)" 
+                required 
+                style={{ border: errorBorder('merek'), marginTop: '8px' }} 
+                autoFocus 
+              />
+            )}
             <FieldError field="merek" />
+          </div>
+          <div className="input-group" style={{ flex: 1 }}>
+            <label>Model / Seri (Opsional):</label>
+            <input 
+              type="text" 
+              value={modelSeri} 
+              onChange={(e) => setModelSeri(e.target.value)} 
+              placeholder="Ex: ThinkPad T480" 
+            />
           </div>
         </div>
 
         <div className="form-row">
-          <div className="input-group">
+          <div className="input-group" style={{ flex: 1 }}>
             <label>Processor Family:</label>
             <select value={procFamily} onChange={(e) => setProcFamily(e.target.value)}>
+              <option value="" disabled>Pilih Processor</option>
               <option value="Celeron">Celeron</option>
+              <option value="Pentium">Pentium</option>
               <option value="Core i3">Intel Core i3</option>
               <option value="Core i5">Intel Core i5</option>
               <option value="Core i7">Intel Core i7</option>
               <option value="Core i9">Intel Core i9</option>
+              <option value="Core Ultra">Intel Core Ultra</option>
               <option value="Ryzen 3">AMD Ryzen 3</option>
               <option value="Ryzen 5">AMD Ryzen 5</option>
               <option value="Ryzen 7">AMD Ryzen 7</option>
@@ -147,10 +232,11 @@ export default function EstimasiForm() {
               <option value="Apple M1">Apple M1</option>
               <option value="Apple M2">Apple M2</option>
               <option value="Apple M3">Apple M3</option>
+              <option value="Snapdragon">Snapdragon</option>
             </select>
           </div>
           {!procFamily.includes('Apple') && (
-            <div className="input-group">
+            <div className="input-group" style={{ flex: 1 }}>
               <label>Model / Gen:</label>
               <input type="text" value={procGen} onChange={(e) => { setProcGen(e.target.value); if (validationErrors.procGen) setValidationErrors(p => { const e={...p}; delete e.procGen; return e; }); }} required placeholder="Ex: 8 atau 8350U" style={{ border: errorBorder('procGen') }} />
               <FieldError field="procGen" />
@@ -159,35 +245,83 @@ export default function EstimasiForm() {
         </div>
 
         <div className="form-row">
-          <div className="input-group">
+          <div className="input-group" style={{ flex: 1 }}>
             <label>RAM (GB):</label>
-            <input type="number" name="ram" value={formData.ram} onChange={handleChange} min="1" style={{ border: errorBorder('ram') }} />
+            <select value={ramMode === 'custom' ? 'custom' : ramSelect} onChange={handleRamSelect} style={{ border: errorBorder('ram') }}>
+              <option value="" disabled>Pilih RAM</option>
+              <option value="2">2 GB</option>
+              <option value="4">4 GB</option>
+              <option value="8">8 GB</option>
+              <option value="12">12 GB</option>
+              <option value="16">16 GB</option>
+              <option value="24">24 GB</option>
+              <option value="32">32 GB</option>
+              <option value="64">64 GB</option>
+              <option value="custom">Custom (Ketik Sendiri)</option>
+            </select>
+            {ramMode === 'custom' && (
+              <input 
+                type="number" 
+                name="ram" 
+                value={formData.ram} 
+                onChange={handleChange} 
+                min="1" 
+                placeholder="RAM (GB)" 
+                required 
+                style={{ border: errorBorder('ram'), marginTop: '8px' }} 
+                autoFocus 
+              />
+            )}
             <FieldError field="ram" />
           </div>
-          <div className="input-group">
-            <label>SSD (GB):</label>
-            <input type="number" name="ssd" value={formData.ssd} onChange={handleChange} min="1" style={{ border: errorBorder('ssd') }} />
+          <div className="input-group" style={{ flex: 1 }}>
+            <label>SSD / Storage (GB):</label>
+            <select value={ssdMode === 'custom' ? 'custom' : ssdSelect} onChange={handleSsdSelect} style={{ border: errorBorder('ssd') }}>
+              <option value="" disabled>Pilih Storage</option>
+              <option value="64">64 GB</option>
+              <option value="128">128 GB</option>
+              <option value="256">256 GB</option>
+              <option value="512">512 GB</option>
+              <option value="1024">1 TB (1024 GB)</option>
+              <option value="2048">2 TB (2048 GB)</option>
+              <option value="custom">Custom (Ketik Sendiri)</option>
+            </select>
+            {ssdMode === 'custom' && (
+              <input 
+                type="number" 
+                name="ssd" 
+                value={formData.ssd} 
+                onChange={handleChange} 
+                min="1" 
+                placeholder="SSD (GB)" 
+                required 
+                style={{ border: errorBorder('ssd'), marginTop: '8px' }} 
+                autoFocus 
+              />
+            )}
             <FieldError field="ssd" />
           </div>
         </div>
 
-        <div className="input-group">
-          <label>Tahun Rilis:</label>
-          <input type="number" name="tahun" value={formData.tahun} onChange={handleChange} style={{ border: errorBorder('tahun') }} />
-          <FieldError field="tahun" />
+        <div className="form-row">
+          <div className="input-group" style={{ flex: 1 }}>
+            <label>Tahun Rilis:</label>
+            <input type="number" name="tahun" value={formData.tahun} onChange={handleChange} placeholder="Ex: 2022" style={{ border: errorBorder('tahun') }} />
+            <FieldError field="tahun" />
+          </div>
+          <div className="input-group" style={{ flex: 2 }}>
+            <label>Kondisi Fisik:</label>
+            <select name="kondisi" value={formData.kondisi} onChange={handleChange}>
+              <option value={0} disabled>Pilih Kondisi</option>
+              <option value={4}>Mulus (Seperti Baru)</option>
+              <option value={3}>Lecet Pemakaian Wajar</option>
+              <option value={2}>Minus Minor (Dent/Whitespot)</option>
+              <option value={1}>Minus Mayor (Baterai Drop/Layar Garis)</option>
+            </select>
+          </div>
         </div>
 
-        <div className="input-group">
-          <label>Kondisi Fisik:</label>
-          <select name="kondisi" value={formData.kondisi} onChange={handleChange}>
-            <option value={4}>Mulus (Seperti Baru)</option>
-            <option value={3}>Lecet Pemakaian Wajar</option>
-            <option value={2}>Minus Minor (Dent/Whitespot)</option>
-            <option value={1}>Minus Mayor (Baterai Drop/Layar Garis)</option>
-          </select>
-        </div>
-
-        <button type="submit" disabled={loading}>
+        <button type="submit" disabled={loading} style={{ marginTop: '10px' }}>
           {loading ? "Menghitung dengan AI..." : "Cek Harga Jual"}
         </button>
       </form>
@@ -195,7 +329,9 @@ export default function EstimasiForm() {
       {/* Hasil Estimasi */}
       {hasilEstimasi && (
         <div className="result-card" style={{ maxWidth: '600px', margin: '20px auto 0' }}>
-          <h3 style={{ margin: '0 0 10px', color: '#166534' }}>Taksiran Harga AI:</h3>
+          <h3 style={{ margin: '0 0 10px', color: '#166534' }}>
+            Taksiran Harga AI {modelSeri ? `(${formData.merek} ${modelSeri})` : `(${formData.merek})`}:
+          </h3>
           <h1 style={{ color: '#22c55e', margin: '0 0 5px', fontSize: '2.2rem' }}>
             {hargaBawah && hargaAtas && hargaBawah !== hargaAtas ?
               `Rp ${hargaBawah.toLocaleString('id-ID')} - Rp ${hargaAtas.toLocaleString('id-ID')}` :
@@ -277,15 +413,47 @@ export default function EstimasiForm() {
                 ))}
               </ul>
 
-              <h5 style={{ margin: '15px 0 10px', color: '#334155', fontSize: '0.95rem' }}>Langkah 3: Kalkulasi Rata-rata Harga</h5>
-              <div style={{ padding: '10px', backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '6px', fontSize: '0.9rem', color: '#166534' }}>
-                (
-                {nearestNeighbors.map((nb, idx) => (
-                  <span key={idx}>Rp {nb.harga.toLocaleString('id-ID')}{idx < nearestNeighbors.length - 1 ? ' + ' : ''}</span>
-                ))}
-                ) / {nearestNeighbors.length} tetangga
-                <br />
-                = <strong style={{ fontSize: '1.1rem' }}>Rp {Math.round(nearestNeighbors.reduce((sum, nb) => sum + nb.harga, 0) / nearestNeighbors.length).toLocaleString('id-ID')}</strong>
+              <h5 style={{ margin: '15px 0 10px', color: '#334155', fontSize: '0.95rem' }}>Langkah 3: Kalkulasi Estimasi Akhir (Rata-rata Harga)</h5>
+              <div style={{ padding: '12px 16px', backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', color: '#166534' }}>
+                <p style={{ margin: '0 0 8px', fontSize: '0.85rem', color: '#15803d', fontWeight: '600' }}>Rumus Estimasi Regresi KNN:</p>
+                <div style={{ background: 'white', padding: '10px 14px', borderRadius: '6px', border: '1px solid #dcfce7', marginBottom: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontFamily: '"Cambria Math", "Times New Roman", serif', fontSize: '1.4rem', fontWeight: 'bold', color: '#15803d' }}>
+                  <span>y&#770; =</span>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', fontSize: '0.95rem', lineHeight: '1.1' }}>
+                    <span>1</span>
+                    <span style={{ borderTop: '2px solid #15803d', width: '100%', textAlign: 'center' }}>K</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                      <span style={{ fontSize: '0.7rem', marginBottom: '-4px' }}>K</span>
+                      <span style={{ fontSize: '1.8rem', fontWeight: 'normal', lineHeight: '1' }}>&sum;</span>
+                      <span style={{ fontSize: '0.7rem', marginTop: '0px' }}>i=1</span>
+                    </div>
+                    <span style={{ fontStyle: 'italic', fontSize: '1.2rem' }}>y<sub>i</sub></span>
+                  </div>
+                </div>
+
+                <div style={{ fontSize: '0.82rem', color: '#166534', marginBottom: '12px', lineHeight: '1.4' }}>
+                  <strong>Keterangan:</strong>
+                  <ul style={{ margin: '4px 0 0', paddingLeft: '18px' }}>
+                    <li><strong>ŷ</strong> = Estimasi harga jual laptop uji.</li>
+                    <li><strong>K</strong> = Jumlah tetangga terdekat yang digunakan ({nearestNeighbors.length}).</li>
+                    <li><strong>y<sub>i</sub></strong> = Harga jual aktual dari tetangga terdekat ke-i.</li>
+                  </ul>
+                </div>
+
+                <div style={{ borderTop: '1px dashed #bbf7d0', paddingTop: '10px', fontSize: '0.9rem' }}>
+                  <p style={{ margin: '0 0 6px', fontSize: '0.82rem', fontWeight: '600', color: '#15803d' }}>Kalkulasi Manual:</p>
+                  <div style={{ fontFamily: 'monospace', background: 'rgba(255,255,255,0.6)', padding: '8px 10px', borderRadius: '4px', marginBottom: '6px' }}>
+                    ŷ = (
+                    {nearestNeighbors.map((nb, idx) => (
+                      <span key={idx}>Rp {nb.harga.toLocaleString('id-ID')}{idx < nearestNeighbors.length - 1 ? ' + ' : ''}</span>
+                    ))}
+                    ) / {nearestNeighbors.length}
+                  </div>
+                  <div style={{ fontSize: '1.05rem', fontWeight: 'bold', color: '#166534' }}>
+                    ŷ = Rp {Math.round(nearestNeighbors.reduce((sum, nb) => sum + nb.harga, 0) / nearestNeighbors.length).toLocaleString('id-ID')}
+                  </div>
+                </div>
               </div>
             </div>
           )}
@@ -331,7 +499,7 @@ export default function EstimasiForm() {
                         hour: '2-digit', minute: '2-digit'
                       })}
                     </td>
-                    <td>{item.merek} - {item.processor}</td>
+                    <td>{item.merek} {modelSeri ? `(${modelSeri})` : ''} - {item.processor}</td>
                     <td style={{ fontWeight: '500' }}>{item.ram}GB / {item.ssd}GB</td>
                     <td>{item.tahun}</td>
                     <td>{getKondisiText(item.kondisi)}</td>

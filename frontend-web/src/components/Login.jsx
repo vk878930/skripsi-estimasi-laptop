@@ -40,10 +40,12 @@ export default function Login() {
   };
 
   return (
-    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', background: '#f1f5f9' }}>
-      <div className="form-card" style={{ maxWidth: '400px', width: '100%', padding: '40px 30px' }}>
-        <h2 style={{ textAlign: 'center', color: '#0f172a', marginBottom: '10px' }}>💻 Laptop Estimator AI</h2>
-        <p style={{ textAlign: 'center', color: '#64748b', marginBottom: '30px' }}>Silakan login ke akun Anda</p>
+    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', padding: '20px' }}>
+      <div className="form-card page-transition" style={{ maxWidth: '440px', width: '100%', padding: '40px 32px' }}>
+        <h2 style={{ textAlign: 'center', marginBottom: '8px', fontSize: '1.8rem', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px' }}>
+          <span style={{ fontSize: '2.2rem' }}>💻</span> Laptop Estimator AI
+        </h2>
+        <p style={{ textAlign: 'center', color: 'var(--clr-text-secondary)', marginBottom: '32px' }}>Silakan login ke akun Anda</p>
 
         {error && (
           <div style={{ backgroundColor: '#fef2f2', color: '#b91c1c', padding: '10px', borderRadius: '6px', marginBottom: '20px', fontSize: '0.9rem', textAlign: 'center' }}>

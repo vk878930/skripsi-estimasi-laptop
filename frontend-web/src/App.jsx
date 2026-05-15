@@ -41,9 +41,9 @@ const MainLayout = ({ children }) => {
   return (
     <div className="main-layout">
       <nav className="navbar">
-        <h1 className="brand" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          💻 Toko Laptop Seken
-          <span style={{ fontSize: '0.8rem', padding: '4px 8px', backgroundColor: '#e2e8f0', color: '#475569', borderRadius: '4px' }}>
+        <h1 className="brand">
+          <span style={{ fontSize: '1.4rem' }}>💻</span> Toko Laptop Seken
+          <span className="brand-badge">
             {role?.toUpperCase()}
           </span>
         </h1>
@@ -86,7 +86,7 @@ const MainLayout = ({ children }) => {
             ⚙️ ML Tuning
           </button>
 
-          <button className="nav-btn" onClick={handleLogout} style={{ color: '#ef4444' }}>
+          <button className="nav-btn nav-btn-logout" onClick={handleLogout}>
             🚪 Logout ({username})
           </button>
         </div>

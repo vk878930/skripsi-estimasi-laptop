@@ -6,6 +6,7 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"os"
 	"time"
 
 	// Sesuaikan "skripsi-backend" dengan nama module di file go.mod kamu
@@ -117,7 +118,19 @@ func (u *laptopUsecaseImpl) UpdateK(k int) (map[string]interface{}, error) {
 
 	updateUrl := u.pythonAPIUrl[:len(u.pythonAPIUrl)-8] + "/update_k"
 
-	response, err := http.Post(updateUrl, "application/json", bytes.NewBuffer(reqBody))
+	req, err := http.NewRequest(http.MethodPost, updateUrl, bytes.NewBuffer(reqBody))
+	if err != nil {
+		return nil, errors.New("gagal membuat request ke service ML")
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	secret := os.Getenv("RETRAIN_SECRET")
+	if secret == "" {
+		secret = "rahasia-retrain-key"
+	}
+	req.Header.Set("X-Retrain-Secret", secret)
+
+	response, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, errors.New("gagal menghubungi service ML untuk update K")
 	}

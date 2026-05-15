@@ -78,6 +78,7 @@ export default function PenjualanDashboard() {
                 toast.success(`Nota ${order_id} berhasil dihapus!`, { id: toastId });
                 fetchPenjualan();
               } catch (err) {
+                console.error('Gagal menghapus transaksi:', err);
                 toast.error('Gagal menghapus transaksi.', { id: toastId });
               }
             }}
@@ -175,7 +176,7 @@ export default function PenjualanDashboard() {
               📊 Import Excel
               <input type="file" accept=".xlsx" onChange={handleImportExcel} style={{ display: 'none' }} />
             </label>
-            <button style={{ backgroundColor: '#2563eb', color: 'white', border: 'none', padding: '10px 15px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}
+            <button className="btn-primary" style={{ padding: '10px 15px', width: 'auto' }}
                   onClick={() => setIsModalOpen(true)}>
                   ➕ Tambah Transaksi
             </button>
